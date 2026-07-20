@@ -57,7 +57,8 @@ namespace TableToShapes.AddIn
     public interface IRibbonControl
     {
         string Id { get; }
-        [return: MarshalAs(UnmanagedType.IDispatch)]
+        // Default VARIANT marshaling carries the IDispatch pointer; [return:]
+        // attributes are not valid on properties.
         object Context { get; }
         string Tag { get; }
     }
