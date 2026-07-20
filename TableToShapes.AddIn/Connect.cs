@@ -21,12 +21,35 @@ namespace TableToShapes.AddIn
     {
         private PowerPoint.Application _app;
 
+        private static readonly string LogPath =
+            System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TableToShapes.AddIn.log");
+
+        private static void Log(string message)
+        {
+            try
+            {
+                System.IO.File.AppendAllText(LogPath,
+                    $"{DateTime.Now:HH:mm:ss.fff} {message}{Environment.NewLine}");
+            }
+            catch { /* logging must never take the add-in down */ }
+        }
+
         // ---- IDTExtensibility2 ----
 
         public void OnConnection(object application, ext_ConnectMode connectMode,
                                  object addInInst, ref Array custom)
         {
-            _app = (PowerPoint.Application)application;
+            try
+            {
+                Log($"OnConnection: mode={connectMode}");
+                _app = (PowerPoint.Application)application;
+                Log("OnConnection: OK");
+            }
+            catch (Exception ex)
+            {
+                Log("OnConnection FAILED: " + ex);
+                throw;
+            }
         }
 
         public void OnDisconnection(ext_DisconnectMode removeMode, ref Array custom)
@@ -42,6 +65,7 @@ namespace TableToShapes.AddIn
 
         public string GetCustomUI(string ribbonID)
         {
+            Log($"GetCustomUI: ribbonID={ribbonID}");
             return @"
 <customUI xmlns='http://schemas.microsoft.com/office/2009/07/customui'>
   <ribbon>
