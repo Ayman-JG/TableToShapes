@@ -23,8 +23,9 @@ $content = Get-Content $regFile -Raw
 $content = $content -replace '\[HKEY_CLASSES_ROOT\\', '[HKEY_CURRENT_USER\Software\Classes\'
 Set-Content $regFile $content -Encoding Unicode
 
-# 3. Import silently.
-reg.exe import $regFile 2>&1 | Out-Null
+# 3. Import silently. reg.exe writes its success message to stderr, which PowerShell
+#    renders in red; capture both streams and rely on the exit code instead.
+$null = & cmd.exe /c "reg.exe import `"$regFile`" 2>&1"
 if ($LASTEXITCODE -ne 0) { throw "reg import failed with exit code $LASTEXITCODE" }
 Remove-Item $regFile
 
