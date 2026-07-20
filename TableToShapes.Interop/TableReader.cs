@@ -26,11 +26,16 @@ namespace TableToShapes.Interop
                 Cells = new CellModel[rows, cols]
             };
 
+            // Cells in the same merge share one underlying shape, so all of them report
+            // identical shape geometry. Shape.Id is not implemented for table cell shapes
+            // (throws E_NOTIMPL), so we derive a synthetic merge id from the geometry.
+            var mergeIds = new Dictionary<string, int>();
+
             for (int r = 1; r <= rows; r++)
             {
                 for (int c = 1; c <= cols; c++)
                 {
-                    model.Cells[r - 1, c - 1] = ReadCell(table.Cell(r, c));
+                    model.Cells[r - 1, c - 1] = ReadCell(table.Cell(r, c), mergeIds);
                 }
             }
 
@@ -44,13 +49,20 @@ namespace TableToShapes.Interop
             return sizes;
         }
 
-        private static CellModel ReadCell(PowerPoint.Cell cell)
+        private static CellModel ReadCell(PowerPoint.Cell cell, Dictionary<string, int> mergeIds)
         {
             var shape = cell.Shape;
+
+            string geometryKey = $"{shape.Left:F2}|{shape.Top:F2}|{shape.Width:F2}|{shape.Height:F2}";
+            if (!mergeIds.TryGetValue(geometryKey, out int mergeId))
+            {
+                mergeId = mergeIds.Count + 1;
+                mergeIds[geometryKey] = mergeId;
+            }
+
             return new CellModel
             {
-                // Cells in the same merge share the underlying shape; its Id is our merge key.
-                MergeId = shape.Id,
+                MergeId = mergeId,
                 Fill = ReadFill(shape.Fill),
                 Text = ReadText(shape.TextFrame2),
                 BorderTop = ReadBorder(cell.Borders[PowerPoint.PpBorderType.ppBorderTop]),
