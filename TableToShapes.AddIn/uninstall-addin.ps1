@@ -2,16 +2,19 @@
 
 $ErrorActionPreference = 'Stop'
 
-$dll = Join-Path $PSScriptRoot 'bin\Debug\net48\TableToShapes.AddIn.dll'
-$regasm = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\RegAsm.exe'
+# Remove per-user COM registration (CLSID + ProgId under HKCU\Software\Classes).
+$clsid = '{6F9B0C64-3C1A-4E6E-9B7D-2D3E8A11F0AB}'
+$paths = @(
+    "HKCU:\Software\Classes\CLSID\$clsid",
+    'HKCU:\Software\Classes\TableToShapes.AddIn.Connect',
+    'HKCU:\Software\Microsoft\Office\PowerPoint\Addins\TableToShapes.AddIn.Connect'
+)
 
-if (Test-Path $dll) {
-    & $regasm $dll /unregister
-}
-
-$key = 'HKCU:\Software\Microsoft\Office\PowerPoint\Addins\TableToShapes.AddIn.Connect'
-if (Test-Path $key) {
-    Remove-Item -Path $key -Recurse -Force
+foreach ($path in $paths) {
+    if (Test-Path $path) {
+        Remove-Item -Path $path -Recurse -Force
+        Write-Host "Removed $path"
+    }
 }
 
 Write-Host 'Add-in unregistered.'
