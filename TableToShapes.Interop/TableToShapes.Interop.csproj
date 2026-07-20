@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <RootNamespace>TableToShapes.Interop</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Office.Interop.PowerPoint" Version="15.0.4420.1018" />
+    <!-- Provides office.dll (Microsoft.Office.Core: MsoTriState, TextFrame2, ...) without needing Office installed at build time. -->
+    <PackageReference Include="MicrosoftOfficeCore" Version="15.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TableToShapes.Core\TableToShapes.Core.csproj" />
+  </ItemGroup>
+
+</Project>
