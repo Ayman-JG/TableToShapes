@@ -26,6 +26,9 @@ namespace TableToShapes.Interop
             var model = _reader.Read(tableShape);
             var layout = _layoutEngine.Calculate(model);
 
+            // Best-effort snapshot of what we read/emitted (temp file); never throws.
+            ConversionDiagnostics.Dump(model, layout);
+
             float left = tableShape.Left, top = tableShape.Top;
 
             List<string> createdNames;
