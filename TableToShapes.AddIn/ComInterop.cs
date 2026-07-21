@@ -12,14 +12,18 @@ namespace TableToShapes.AddIn
     [InterfaceType(ComInterfaceType.InterfaceIsDual)]
     public interface IDTExtensibility2
     {
+        // The custom parameter is a COM SAFEARRAY of VARIANTs; without the explicit
+        // MarshalAs the default marshaling mismatches and crashes the host process
+        // the moment Office calls into the vtable.
         void OnConnection([MarshalAs(UnmanagedType.IDispatch)] object application,
                           ext_ConnectMode connectMode,
                           [MarshalAs(UnmanagedType.IDispatch)] object addInInst,
-                          ref Array custom);
-        void OnDisconnection(ext_DisconnectMode removeMode, ref Array custom);
-        void OnAddInsUpdate(ref Array custom);
-        void OnStartupComplete(ref Array custom);
-        void OnBeginShutdown(ref Array custom);
+                          [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_VARIANT)] ref Array custom);
+        void OnDisconnection(ext_DisconnectMode removeMode,
+                             [MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_VARIANT)] ref Array custom);
+        void OnAddInsUpdate([MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_VARIANT)] ref Array custom);
+        void OnStartupComplete([MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_VARIANT)] ref Array custom);
+        void OnBeginShutdown([MarshalAs(UnmanagedType.SafeArray, SafeArraySubType = VarEnum.VT_VARIANT)] ref Array custom);
     }
 
     public enum ext_ConnectMode
