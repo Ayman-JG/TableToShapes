@@ -12,6 +12,9 @@ namespace TableToShapes.Interop
     /// </summary>
     public sealed class ShapeWriter
     {
+        /// <summary>Prefix applied to every shape we create, so partial output can be cleaned up on failure.</summary>
+        public const string CreatedShapePrefix = "T2S_";
+
         /// <summary>Creates all cell rectangles and border lines; returns their shape names.</summary>
         public List<string> Write(PowerPoint.Slide slide, TableModel table, LayoutResult layout)
         {
@@ -20,12 +23,16 @@ namespace TableToShapes.Interop
             // Paint order matters: fills first, borders on top (mirrors table rendering).
             foreach (var cell in layout.Cells)
             {
-                names.Add(WriteCell(slide, table.Cells[cell.Row, cell.Column], cell).Name);
+                var shape = WriteCell(slide, table.Cells[cell.Row, cell.Column], cell);
+                shape.Name = CreatedShapePrefix + shape.Name;
+                names.Add(shape.Name);
             }
 
             foreach (var edge in layout.Edges)
             {
-                names.Add(WriteEdge(slide, edge).Name);
+                var shape = WriteEdge(slide, edge);
+                shape.Name = CreatedShapePrefix + shape.Name;
+                names.Add(shape.Name);
             }
 
             return names;
@@ -43,7 +50,7 @@ namespace TableToShapes.Interop
                 rect.Fill.Visible = Office.MsoTriState.msoTrue;
                 rect.Fill.Solid();
                 rect.Fill.ForeColor.RGB = cell.Fill.ColorRgb;
-                rect.Fill.Transparency = cell.Fill.Transparency;
+                rect.Fill.Transparency = Clamp01(cell.Fill.Transparency);
             }
             else
             {
@@ -57,11 +64,19 @@ namespace TableToShapes.Interop
         private static PowerPoint.Shape WriteEdge(PowerPoint.Slide slide, EdgePlacement edge)
         {
             var line = slide.Shapes.AddLine(edge.X1, edge.Y1, edge.X2, edge.Y2);
-            line.Line.Weight = edge.Weight;
+            if (edge.Weight > 0f) line.Line.Weight = edge.Weight;
             line.Line.ForeColor.RGB = edge.ColorRgb;
             line.Line.DashStyle = (Office.MsoLineDashStyle)edge.DashStyle;
-            line.Line.Transparency = edge.Transparency;
+            line.Line.Transparency = Clamp01(edge.Transparency);
             return line;
+        }
+
+        // PowerPoint requires Transparency in [0, 1]; read-back values can drift slightly.
+        private static float Clamp01(float value)
+        {
+            if (value < 0f) return 0f;
+            if (value > 1f) return 1f;
+            return value;
         }
 
         private static void WriteText(PowerPoint.TextFrame2 frame, TextModel text)
@@ -93,6 +108,9 @@ namespace TableToShapes.Interop
                 foreach (var run in para.Runs)
                 {
                     int length = run.Text.Length;
+                    // Characters[index, 0] throws "value out of range"; skip empty runs.
+                    if (length == 0) continue;
+
                     var range = frame.TextRange.Characters[charIndex, length];
                     range.Font.Name = run.FontName;
                     range.Font.Size = run.FontSize;
@@ -103,12 +121,16 @@ namespace TableToShapes.Interop
                     charIndex += length;
                 }
 
-                var paraRange = frame.TextRange.Paragraphs[paraIndex, 1];
-                paraRange.ParagraphFormat.Alignment = (Office.MsoParagraphAlignment)para.Alignment;
-                paraRange.ParagraphFormat.SpaceBefore = para.SpaceBefore;
-                paraRange.ParagraphFormat.SpaceAfter = para.SpaceAfter;
-                paraRange.ParagraphFormat.SpaceWithin = para.SpaceWithin;
-                paraRange.ParagraphFormat.IndentLevel = para.IndentLevel;
+                // Guard against paragraph-count drift between model and live text.
+                if (paraIndex <= frame.TextRange.Paragraphs.Count)
+                {
+                    var paraRange = frame.TextRange.Paragraphs[paraIndex, 1];
+                    paraRange.ParagraphFormat.Alignment = (Office.MsoParagraphAlignment)para.Alignment;
+                    paraRange.ParagraphFormat.SpaceBefore = para.SpaceBefore;
+                    paraRange.ParagraphFormat.SpaceAfter = para.SpaceAfter;
+                    paraRange.ParagraphFormat.SpaceWithin = para.SpaceWithin;
+                    paraRange.ParagraphFormat.IndentLevel = para.IndentLevel;
+                }
                 paraIndex++;
             }
         }
