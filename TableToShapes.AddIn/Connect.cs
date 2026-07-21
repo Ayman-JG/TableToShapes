@@ -16,7 +16,9 @@ namespace TableToShapes.AddIn
     [ComVisible(true)]
     [Guid("6F9B0C64-3C1A-4E6E-9B7D-2D3E8A11F0AB")]
     [ProgId("TableToShapes.AddIn.Connect")]
-    [ClassInterface(ClassInterfaceType.None)]
+    // AutoDispatch exposes public methods via IDispatch so the Ribbon can resolve
+    // the onAction callback ("OnConvertClicked") by name at runtime.
+    [ClassInterface(ClassInterfaceType.AutoDispatch)]
     public class Connect : IDTExtensibility2, IRibbonExtensibility
     {
         private PowerPoint.Application _app;
@@ -92,18 +94,22 @@ namespace TableToShapes.AddIn
         {
             try
             {
+                Log("OnConvertClicked: fired");
                 var shape = GetSelectedShape();
                 if (shape == null || shape.HasTable != Office.MsoTriState.msoTrue)
                 {
+                    Log("OnConvertClicked: no table selected");
                     MessageBox.Show("Please select a table first.", "Table to Shapes",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
                 new TableConverter().Convert(shape);
+                Log("OnConvertClicked: converted OK");
             }
             catch (Exception ex)
             {
+                Log("OnConvertClicked FAILED: " + ex);
                 MessageBox.Show("Conversion failed: " + ex.Message, "Table to Shapes",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
