@@ -77,10 +77,23 @@ namespace TableToShapes.Core.Model
     {
         public string Text { get; set; }
         public string FontName { get; set; }
+
+        /// <summary>
+        /// Latin/complex-script/East-Asian font names. PowerPoint picks the actual
+        /// rendering face from these per character script, so copying only <see cref="FontName"/>
+        /// can leave a run showing a substituted (e.g. serif) font. Null = not captured.
+        /// </summary>
+        public string FontNameComplexScript { get; set; }
+        public string FontNameFarEast { get; set; }
+
         public float FontSize { get; set; }
         public bool Bold { get; set; }
         public bool Italic { get; set; }
         public int UnderlineStyle { get; set; }
         public int ColorRgb { get; set; }
+
+        /// <summary>Text highlight (marker) colour. Only applied when <see cref="HasHighlight"/> is true.</summary>
+        public bool HasHighlight { get; set; }
+        public int HighlightColorRgb { get; set; }
     }
 }

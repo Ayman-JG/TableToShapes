@@ -40,7 +40,7 @@ namespace TableToShapes.Core.Layout
                     };
                     cells.Add(placement);
 
-                    AddEdges(edges, table.Cells[r, c], placement);
+                    AddCellEdges(edges, table, placement, rowOffsets, colOffsets);
                 }
             }
 
@@ -78,12 +78,38 @@ namespace TableToShapes.Core.Layout
             return span;
         }
 
-        private static void AddEdges(List<EdgePlacement> edges, CellModel cell, CellPlacement p)
+        // A merged cell's border is not a single long line: PowerPoint stores and paints it
+        // as one segment per crossed row/column, and each segment can come from a different
+        // sub-cell. Emitting the border as one full-span line (the old behaviour) meant a
+        // merged cell's border never lined up with the individual borders of the cells on the
+        // far side, so both were drawn and the heavier/darker one bled through (the stray
+        // vertical line in the test render). Decomposing into per-track unit segments lets the
+        // shared-edge de-duplication in AddEdge collapse them correctly.
+        private static void AddCellEdges(
+            List<EdgePlacement> edges, TableModel table, CellPlacement p,
+            float[] rowOffsets, float[] colOffsets)
         {
-            AddEdge(edges, cell.BorderTop, p.Left, p.Top, p.Left + p.Width, p.Top);
-            AddEdge(edges, cell.BorderBottom, p.Left, p.Top + p.Height, p.Left + p.Width, p.Top + p.Height);
-            AddEdge(edges, cell.BorderLeft, p.Left, p.Top, p.Left, p.Top + p.Height);
-            AddEdge(edges, cell.BorderRight, p.Left + p.Width, p.Top, p.Left + p.Width, p.Top + p.Height);
+            int r = p.Row, c = p.Column, rs = p.RowSpan, cs = p.ColumnSpan;
+            float top = rowOffsets[r], bottom = rowOffsets[r + rs];
+            float left = colOffsets[c], right = colOffsets[c + cs];
+
+            // Top / bottom: one segment per spanned column, sourced from the edge-most sub-cell.
+            for (int cc = c; cc < c + cs; cc++)
+            {
+                AddEdge(edges, table.Cells[r, cc].BorderTop,
+                    colOffsets[cc], top, colOffsets[cc + 1], top);
+                AddEdge(edges, table.Cells[r + rs - 1, cc].BorderBottom,
+                    colOffsets[cc], bottom, colOffsets[cc + 1], bottom);
+            }
+
+            // Left / right: one segment per spanned row.
+            for (int rr = r; rr < r + rs; rr++)
+            {
+                AddEdge(edges, table.Cells[rr, c].BorderLeft,
+                    left, rowOffsets[rr], left, rowOffsets[rr + 1]);
+                AddEdge(edges, table.Cells[rr, c + cs - 1].BorderRight,
+                    right, rowOffsets[rr], right, rowOffsets[rr + 1]);
+            }
         }
 
         private static void AddEdge(List<EdgePlacement> edges, BorderModel border,

@@ -93,11 +93,16 @@ namespace TableToShapes.Interop
             if (!text.HasText) return;
 
             // Insert the full plain text, then re-apply run formatting over exact character
-            // ranges. This avoids the clipboard (unreliable in automation).
+            // ranges. This avoids the clipboard (unreliable in automation). Paragraphs are
+            // joined with a carriage return - the paragraph separator in TextRange2 - so
+            // multi-paragraph cells keep their line breaks (and our char offsets stay aligned).
             var builder = new StringBuilder();
-            foreach (var para in text.Paragraphs)
-                foreach (var run in para.Runs)
+            for (int p = 0; p < text.Paragraphs.Count; p++)
+            {
+                if (p > 0) builder.Append('\r');
+                foreach (var run in text.Paragraphs[p].Runs)
                     builder.Append(run.Text);
+            }
 
             frame.TextRange.Text = builder.ToString();
 
@@ -113,13 +118,23 @@ namespace TableToShapes.Interop
 
                     var range = frame.TextRange.Characters[charIndex, length];
                     range.Font.Name = run.FontName;
+                    if (!string.IsNullOrEmpty(run.FontNameComplexScript))
+                        range.Font.NameComplexScript = run.FontNameComplexScript;
+                    if (!string.IsNullOrEmpty(run.FontNameFarEast))
+                        range.Font.NameFarEast = run.FontNameFarEast;
                     range.Font.Size = run.FontSize;
                     range.Font.Bold = run.Bold ? Office.MsoTriState.msoTrue : Office.MsoTriState.msoFalse;
                     range.Font.Italic = run.Italic ? Office.MsoTriState.msoTrue : Office.MsoTriState.msoFalse;
                     range.Font.UnderlineStyle = (Office.MsoTextUnderlineType)run.UnderlineStyle;
                     range.Font.Fill.ForeColor.RGB = run.ColorRgb;
+                    // Setting the Highlight colour turns marker highlighting on for the range.
+                    if (run.HasHighlight)
+                        range.Font.Highlight.RGB = run.HighlightColorRgb;
                     charIndex += length;
                 }
+
+                // Account for the paragraph-break character inserted between paragraphs.
+                if (paraIndex < text.Paragraphs.Count) charIndex += 1;
 
                 // Guard against paragraph-count drift between model and live text.
                 if (paraIndex <= frame.TextRange.Paragraphs.Count)

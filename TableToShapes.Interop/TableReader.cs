@@ -111,7 +111,7 @@ namespace TableToShapes.Interop
             return new FillModel
             {
                 Visible = visible,
-                // ForeColor.RGB resolves theme colours to literal RGB — exactly what we
+                // ForeColor.RGB resolves theme colours to literal RGB ï¿½ exactly what we
                 // want for pixel fidelity (at the cost of losing theme re-colouring).
                 ColorRgb = visible ? fill.ForeColor.RGB : 0,
                 Transparency = visible ? fill.Transparency : 0f
@@ -150,18 +150,18 @@ namespace TableToShapes.Interop
             foreach (Office.TextRange2 para in frame.TextRange.Paragraphs)
             {
                 var runs = new List<RunModel>();
-                foreach (Office.TextRange2 run in para.Runs[1, -1])
+
+                // BUG FIX: the old code iterated `para.Runs[1, -1]`. Per the Office docs,
+                // when Start is given but Length is omitted (-1 is the omitted sentinel),
+                // Runs returns exactly ONE run - so every run after the first was silently
+                // dropped, taking its text and formatting with it. We instead count the runs
+                // and read each one individually.
+                Office.TextRange2 allRuns = para.Runs[-1, -1]; // both omitted => the whole paragraph's runs
+                int runCount = allRuns.Count;
+                for (int ri = 1; ri <= runCount; ri++)
                 {
-                    runs.Add(new RunModel
-                    {
-                        Text = run.Text,
-                        FontName = run.Font.Name,
-                        FontSize = run.Font.Size,
-                        Bold = run.Font.Bold == Office.MsoTriState.msoTrue,
-                        Italic = run.Font.Italic == Office.MsoTriState.msoTrue,
-                        UnderlineStyle = (int)run.Font.UnderlineStyle,
-                        ColorRgb = run.Font.Fill.ForeColor.RGB
-                    });
+                    Office.TextRange2 run = para.Runs[ri, 1];
+                    runs.Add(ReadRun(run));
                 }
 
                 paragraphs.Add(new ParagraphModel
@@ -177,6 +177,48 @@ namespace TableToShapes.Interop
 
             text.Paragraphs = paragraphs;
             return text;
+        }
+
+        private static RunModel ReadRun(Office.TextRange2 run)
+        {
+            var font = run.Font;
+            var model = new RunModel
+            {
+                Text = run.Text,
+                FontName = font.Name,
+                // Copy the script-specific faces too: PowerPoint renders each character with
+                // the face that matches its script, so a run can display a substituted font
+                // if only Name is reproduced. Guarded because some builds throw on these.
+                FontNameComplexScript = TryGet(() => font.NameComplexScript),
+                FontNameFarEast = TryGet(() => font.NameFarEast),
+                FontSize = font.Size,
+                Bold = font.Bold == Office.MsoTriState.msoTrue,
+                Italic = font.Italic == Office.MsoTriState.msoTrue,
+                UnderlineStyle = (int)font.UnderlineStyle,
+                ColorRgb = font.Fill.ForeColor.RGB
+            };
+
+            // Highlight (marker) colour. Unhighlighted runs report msoColorTypeMixed;
+            // a real highlight reports a concrete RGB. Reading is wrapped because older
+            // Office builds throw E_NOTIMPL on Font2.Highlight.
+            try
+            {
+                var highlight = font.Highlight;
+                if (highlight != null && highlight.Type == Office.MsoColorType.msoColorTypeRGB)
+                {
+                    model.HasHighlight = true;
+                    model.HighlightColorRgb = highlight.RGB;
+                }
+            }
+            catch { /* highlight unsupported on this build */ }
+
+            return model;
+        }
+
+        private static string TryGet(System.Func<string> get)
+        {
+            try { return get(); }
+            catch { return null; }
         }
     }
 }
