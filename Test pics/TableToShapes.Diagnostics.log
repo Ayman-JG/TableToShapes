@@ -53,3 +53,114 @@ cell[3,2] merge=9 fill=0x3271E9 text="r"
   (586.67,173.47)->(800.00,173.47) w=1.00 color=0xFFFFFF dash=1
   (800.00,144.27)->(800.00,173.47) w=1.00 color=0xFFFFFF dash=1
 
+=== TableToShapes diagnostics @ 2026-07-21T16:36:57.7140303+01:00 ===
+Grid 4x3  Left=160.00 Top=56.67
+ColWidths=[213.33, 213.34, 213.33]  RowHeights=[29.20, 29.20, 29.20, 29.20]
+
+cell[0,0] merge=1 fill=0x826015 text="he1"
+    T:ON w=1.00 0xFFFFFF  B:ON w=3.00 0xFFFFFF  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[0,1] merge=2 fill=0x826015 text="he2"
+    T:ON w=1.00 0xFFFFFF  B:ON w=3.00 0xFFFFFF  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[0,2] merge=3 fill=0x826015 text="test"
+    T:ON w=1.00 0xFFFFFF  B:ON w=3.00 0xFFFFFF  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[1,0] merge=4 fill=0xD8D2CC text="Test ME"
+    T:ON w=3.00 0xFFFFFF  B:off  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[1,1] merge=5 fill=0xD8D2CC text="This is MERGED"
+    T:ON w=3.00 0xFFFFFF  B:ON w=1.00 0xFFFFFF  L:ON w=1.00 0x000000  R:ON w=1.00 0xFFFFFF
+cell[1,2] merge=5 fill=0xD8D2CC text="This is MERGED"
+    T:ON w=3.00 0xFFFFFF  B:ON w=1.00 0xFFFFFF  L:ON w=1.00 0x000000  R:ON w=1.00 0xFFFFFF
+cell[2,0] merge=6 fill=0xEDEAE7 text="No border cell"
+    T:off  B:off  L:off  R:off
+cell[2,1] merge=5 fill=0xD8D2CC text="This is MERGED"
+    T:ON w=3.00 0xFFFFFF  B:ON w=1.00 0xFFFFFF  L:ON w=1.00 0x000000  R:ON w=1.00 0xFFFFFF
+cell[2,2] merge=5 fill=0xD8D2CC text="This is MERGED"
+    T:ON w=3.00 0xFFFFFF  B:ON w=1.00 0xFFFFFF  L:ON w=1.00 0x000000  R:ON w=1.00 0xFFFFFF
+cell[3,0] merge=7 fill=0xD8D2CC text="ro2a"
+    T:off  B:ON w=1.00 0xFFFFFF  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[3,1] merge=8 fill=0xD8D2CC text="ed2"
+    T:ON w=1.00 0xFFFFFF  B:ON w=1.00 0xFFFFFF  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[3,2] merge=9 fill=0x3271E9 text="r"
+    T:ON w=1.00 0xFFFFFF  B:ON w=1.00 0xFFFFFF  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+
+--- emitted edges (23) ---
+  (160.00,56.67)->(373.33,56.67) w=1.00 color=0xFFFFFF dash=1
+  (160.00,85.87)->(373.33,85.87) w=3.00 color=0xFFFFFF dash=1
+  (160.00,56.67)->(160.00,85.87) w=1.00 color=0xFFFFFF dash=1
+  (373.33,56.67)->(373.33,85.87) w=1.00 color=0xFFFFFF dash=1
+  (373.33,56.67)->(586.67,56.67) w=1.00 color=0xFFFFFF dash=1
+  (373.33,85.87)->(586.67,85.87) w=3.00 color=0xFFFFFF dash=1
+  (586.67,56.67)->(586.67,85.87) w=1.00 color=0xFFFFFF dash=1
+  (586.67,56.67)->(800.00,56.67) w=1.00 color=0xFFFFFF dash=1
+  (586.67,85.87)->(800.00,85.87) w=3.00 color=0xFFFFFF dash=1
+  (800.00,56.67)->(800.00,85.87) w=1.00 color=0xFFFFFF dash=1
+  (160.00,85.87)->(160.00,115.07) w=1.00 color=0xFFFFFF dash=1
+  (373.33,85.87)->(373.33,115.07) w=1.00 color=0xFFFFFF dash=1
+  (373.33,144.27)->(586.67,144.27) w=1.00 color=0xFFFFFF dash=1
+  (586.67,144.27)->(800.00,144.27) w=1.00 color=0xFFFFFF dash=1
+  (800.00,85.87)->(800.00,115.07) w=1.00 color=0xFFFFFF dash=1
+  (800.00,115.07)->(800.00,144.27) w=1.00 color=0xFFFFFF dash=1
+  (160.00,173.47)->(373.33,173.47) w=1.00 color=0xFFFFFF dash=1
+  (160.00,144.27)->(160.00,173.47) w=1.00 color=0xFFFFFF dash=1
+  (373.33,144.27)->(373.33,173.47) w=1.00 color=0xFFFFFF dash=1
+  (373.33,173.47)->(586.67,173.47) w=1.00 color=0xFFFFFF dash=1
+  (586.67,144.27)->(586.67,173.47) w=1.00 color=0xFFFFFF dash=1
+  (586.67,173.47)->(800.00,173.47) w=1.00 color=0xFFFFFF dash=1
+  (800.00,144.27)->(800.00,173.47) w=1.00 color=0xFFFFFF dash=1
+
+=== TableToShapes diagnostics @ 2026-07-21T16:42:16.1386371+01:00 ===
+Grid 4x3  Left=160.00 Top=236.99
+ColWidths=[213.33, 213.34, 213.33]  RowHeights=[29.20, 29.20, 29.20, 29.20]
+
+cell[0,0] merge=1 fill=0x2EA74E text="he1"
+    T:ON w=1.00 0xFFFFFF  B:ON w=3.00 0xFFFFFF  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[0,1] merge=2 fill=0x2EA74E text="Mrerged header"
+    T:ON w=1.00 0xFFFFFF  B:ON w=3.00 0xFFFFFF  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[0,2] merge=2 fill=0x2EA74E text="Mrerged header"
+    T:ON w=1.00 0xFFFFFF  B:ON w=3.00 0xFFFFFF  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[1,0] merge=3 fill=0xCDE1D0 text="Test ME"
+    T:ON w=3.00 0xFFFFFF  B:ON w=1.00 0xFFFFFF  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[1,1] merge=4 fill=0xCDE1D0 text="This is MERGED"
+    T:ON w=3.00 0xFFFFFF  B:ON w=1.00 0x000000  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[1,2] merge=4 fill=0xCDE1D0 text="This is MERGED"
+    T:ON w=3.00 0xFFFFFF  B:ON w=1.00 0x000000  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[2,0] merge=5 fill=0xE8F1E9 text="No border cell"
+    T:ON w=1.00 0xFFFFFF  B:ON w=1.00 0xFFFFFF  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[2,1] merge=4 fill=0xCDE1D0 text="This is MERGED"
+    T:ON w=3.00 0xFFFFFF  B:ON w=1.00 0x000000  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[2,2] merge=4 fill=0xCDE1D0 text="This is MERGED"
+    T:ON w=3.00 0xFFFFFF  B:ON w=1.00 0x000000  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[3,0] merge=6 fill=0xCDE1D0 text="ro2a"
+    T:ON w=1.00 0xFFFFFF  B:ON w=1.00 0xFFFFFF  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0xFFFFFF
+cell[3,1] merge=7 fill=0xCDE1D0 text="No border cell"
+    T:ON w=1.00 0xFFFFFF  B:ON w=1.00 0xFFFFFF  L:ON w=1.00 0xFFFFFF  R:ON w=1.00 0x000000
+cell[3,2] merge=8 fill=0xCDE1D0 text="Different font- full border"
+    T:ON w=1.00 0x000000  B:ON w=1.00 0x000000  L:ON w=1.00 0x000000  R:ON w=1.00 0x000000
+
+--- emitted edges (26) ---
+  (160.00,236.99)->(373.33,236.99) w=1.00 color=0xFFFFFF dash=1
+  (160.00,266.19)->(373.33,266.19) w=3.00 color=0xFFFFFF dash=1
+  (160.00,236.99)->(160.00,266.19) w=1.00 color=0xFFFFFF dash=1
+  (373.33,236.99)->(373.33,266.19) w=1.00 color=0xFFFFFF dash=1
+  (373.33,236.99)->(586.67,236.99) w=1.00 color=0xFFFFFF dash=1
+  (373.33,266.19)->(586.67,266.19) w=3.00 color=0xFFFFFF dash=1
+  (586.67,236.99)->(800.00,236.99) w=1.00 color=0xFFFFFF dash=1
+  (586.67,266.19)->(800.00,266.19) w=3.00 color=0xFFFFFF dash=1
+  (800.00,236.99)->(800.00,266.19) w=1.00 color=0xFFFFFF dash=1
+  (160.00,295.39)->(373.33,295.39) w=1.00 color=0xFFFFFF dash=1
+  (160.00,266.19)->(160.00,295.39) w=1.00 color=0xFFFFFF dash=1
+  (373.33,266.19)->(373.33,295.39) w=1.00 color=0xFFFFFF dash=1
+  (373.33,324.59)->(586.67,324.59) w=1.00 color=0x000000 dash=1
+  (586.67,324.59)->(800.00,324.59) w=1.00 color=0x000000 dash=1
+  (800.00,266.19)->(800.00,295.39) w=1.00 color=0xFFFFFF dash=1
+  (373.33,295.39)->(373.33,324.59) w=1.00 color=0xFFFFFF dash=1
+  (800.00,295.39)->(800.00,324.59) w=1.00 color=0xFFFFFF dash=1
+  (160.00,324.59)->(373.33,324.59) w=1.00 color=0xFFFFFF dash=1
+  (160.00,295.39)->(160.00,324.59) w=1.00 color=0xFFFFFF dash=1
+  (160.00,353.79)->(373.33,353.79) w=1.00 color=0xFFFFFF dash=1
+  (160.00,324.59)->(160.00,353.79) w=1.00 color=0xFFFFFF dash=1
+  (373.33,324.59)->(373.33,353.79) w=1.00 color=0xFFFFFF dash=1
+  (373.33,353.79)->(586.67,353.79) w=1.00 color=0xFFFFFF dash=1
+  (586.67,324.59)->(586.67,353.79) w=1.00 color=0x000000 dash=1
+  (586.67,353.79)->(800.00,353.79) w=1.00 color=0x000000 dash=1
+  (800.00,324.59)->(800.00,353.79) w=1.00 color=0x000000 dash=1
+
