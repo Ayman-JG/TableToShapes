@@ -102,21 +102,22 @@ namespace TableToShapes.Core.Layout
         {
             int r = p.Row, c = p.Column, rs = p.RowSpan, cs = p.ColumnSpan;
             var anchor = table.Cells[r, c];
+            bool merged = rs > 1 || cs > 1;
             float top = rowOffsets[r], bottom = rowOffsets[r + rs];
             float left = colOffsets[c], right = colOffsets[c + cs];
 
             // Top / bottom: one segment per spanned column.
             for (int cc = c; cc < c + cs; cc++)
             {
-                HandleSide(edges, suppressors, anchor.BorderTop, colOffsets[cc], top, colOffsets[cc + 1], top);
-                HandleSide(edges, suppressors, anchor.BorderBottom, colOffsets[cc], bottom, colOffsets[cc + 1], bottom);
+                HandleSide(edges, suppressors, anchor.BorderTop, merged, colOffsets[cc], top, colOffsets[cc + 1], top);
+                HandleSide(edges, suppressors, anchor.BorderBottom, merged, colOffsets[cc], bottom, colOffsets[cc + 1], bottom);
             }
 
             // Left / right: one segment per spanned row.
             for (int rr = r; rr < r + rs; rr++)
             {
-                HandleSide(edges, suppressors, anchor.BorderLeft, left, rowOffsets[rr], left, rowOffsets[rr + 1]);
-                HandleSide(edges, suppressors, anchor.BorderRight, right, rowOffsets[rr], right, rowOffsets[rr + 1]);
+                HandleSide(edges, suppressors, anchor.BorderLeft, merged, left, rowOffsets[rr], left, rowOffsets[rr + 1]);
+                HandleSide(edges, suppressors, anchor.BorderRight, merged, right, rowOffsets[rr], right, rowOffsets[rr + 1]);
             }
         }
 
@@ -124,16 +125,16 @@ namespace TableToShapes.Core.Layout
         // suppressor that cancels any coincident edge (see the note in Calculate).
         private static void HandleSide(
             List<EdgePlacement> edges, List<EdgePlacement> suppressors,
-            BorderModel border, float x1, float y1, float x2, float y2)
+            BorderModel border, bool fromMerged, float x1, float y1, float x2, float y2)
         {
             if (border == null) return;
             if (border.Visible)
-                AddEdge(edges, border, x1, y1, x2, y2);
+                AddEdge(edges, border, fromMerged, x1, y1, x2, y2);
             else
                 suppressors.Add(new EdgePlacement { X1 = x1, Y1 = y1, X2 = x2, Y2 = y2 });
         }
 
-        private static void AddEdge(List<EdgePlacement> edges, BorderModel border,
+        private static void AddEdge(List<EdgePlacement> edges, BorderModel border, bool fromMerged,
                                     float x1, float y1, float x2, float y2)
         {
             if (border == null || !border.Visible) return;
@@ -144,17 +145,29 @@ namespace TableToShapes.Core.Layout
                 Weight = border.Weight,
                 ColorRgb = border.ColorRgb,
                 DashStyle = border.DashStyle,
-                Transparency = border.Transparency
+                Transparency = border.Transparency,
+                FromMerged = fromMerged
             };
 
-            // Adjacent cells both report the shared edge; keep only one, preferring
-            // the heavier line if styles conflict (matches PowerPoint's paint order).
             var existing = edges.FirstOrDefault(e => e.GeometricallyEquals(edge));
             if (existing == null)
             {
                 edges.Add(edge);
+                return;
             }
-            else if (edge.Weight > existing.Weight)
+
+            // A plain cell's border reflects what PowerPoint actually paints on a shared edge;
+            // a merged cell often reports a stray/automatic border there. So a plain border
+            // always wins over a merged one, regardless of weight.
+            if (existing.FromMerged != edge.FromMerged)
+            {
+                if (existing.FromMerged) { edges.Remove(existing); edges.Add(edge); }
+                return;
+            }
+
+            // Otherwise both sides are the same kind: keep the heavier line (PowerPoint's
+            // paint order), and on a tie keep the first one added.
+            if (edge.Weight > existing.Weight)
             {
                 edges.Remove(existing);
                 edges.Add(edge);

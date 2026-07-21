@@ -41,6 +41,7 @@ namespace TableToShapes.Interop
                             r, c, cell.MergeId, Fmt(cell.Fill), FirstLine(cell.Text)));
                         sb.AppendLine("    T:" + Fmt(cell.BorderTop) + "  B:" + Fmt(cell.BorderBottom) +
                                       "  L:" + Fmt(cell.BorderLeft) + "  R:" + Fmt(cell.BorderRight));
+                        DumpRuns(sb, cell.Text);
                     }
                 }
 
@@ -70,6 +71,26 @@ namespace TableToShapes.Interop
         {
             if (f == null) return "null";
             return f.Visible ? string.Format(CultureInfo.InvariantCulture, "0x{0:X6}", f.ColorRgb & 0xFFFFFF) : "none";
+        }
+
+        private static void DumpRuns(StringBuilder sb, TextModel t)
+        {
+            if (t == null || !t.HasText) return;
+            for (int p = 0; p < t.Paragraphs.Count; p++)
+            {
+                var para = t.Paragraphs[p];
+                for (int i = 0; i < para.Runs.Count; i++)
+                {
+                    var run = para.Runs[i];
+                    sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                        "      run[p{0}.{1}] \"{2}\" font=\"{3}\" cs=\"{4}\" fe=\"{5}\" sz={6:F1} " +
+                        "B={7} I={8} U={9} strike={10} color=0x{11:X6} highlight={12}",
+                        p, i, run.Text, run.FontName, run.FontNameComplexScript, run.FontNameFarEast,
+                        run.FontSize, run.Bold ? 1 : 0, run.Italic ? 1 : 0, run.UnderlineStyle,
+                        run.Strike, run.ColorRgb & 0xFFFFFF,
+                        run.HasHighlight ? ("0x" + (run.HighlightColorRgb & 0xFFFFFF).ToString("X6", CultureInfo.InvariantCulture)) : "off"));
+                }
+            }
         }
 
         private static string FirstLine(TextModel t)

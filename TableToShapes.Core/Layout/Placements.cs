@@ -29,6 +29,13 @@ namespace TableToShapes.Core.Layout
         public int DashStyle { get; set; }
         public float Transparency { get; set; }
 
+        /// <summary>
+        /// True when this segment came from a merged cell's outer border. Merged cells
+        /// frequently report a stray/automatic border on a shared edge, so a plain cell's
+        /// border on the same edge is preferred (see AddEdge).
+        /// </summary>
+        public bool FromMerged { get; set; }
+
         public bool GeometricallyEquals(EdgePlacement other)
         {
             if (other == null) return false;

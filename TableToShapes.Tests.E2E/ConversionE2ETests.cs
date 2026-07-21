@@ -159,8 +159,11 @@ namespace TableToShapes.Tests.E2E
             })
                 noBorder.Borders[side].Visible = Office.MsoTriState.msoFalse;
 
-            // Bottom row - last cell filled orange.
-            SetText(table.Cell(4, 1), "ro2a");
+            // Bottom row - "ro2a" struck through and in a distinct font; last cell filled orange.
+            var ro2a = table.Cell(4, 1).Shape.TextFrame2.TextRange;
+            ro2a.Text = "ro2a";
+            ro2a.Font.Strike = Office.MsoTextStrike.msoTextSingleStrike;
+            ro2a.Font.Name = "Consolas";
             SetText(table.Cell(4, 2), "ed2");
             var rCell = table.Cell(4, 3);
             rCell.Shape.Fill.ForeColor.RGB = Orange;

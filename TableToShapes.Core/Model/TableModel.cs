@@ -90,6 +90,8 @@ namespace TableToShapes.Core.Model
         public bool Bold { get; set; }
         public bool Italic { get; set; }
         public int UnderlineStyle { get; set; }
+        /// <summary>MsoTextStrike value (0 = none, single, double).</summary>
+        public int Strike { get; set; }
         public int ColorRgb { get; set; }
 
         /// <summary>Text highlight (marker) colour. Only applied when <see cref="HasHighlight"/> is true.</summary>

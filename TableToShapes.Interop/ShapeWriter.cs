@@ -126,6 +126,7 @@ namespace TableToShapes.Interop
                     range.Font.Bold = run.Bold ? Office.MsoTriState.msoTrue : Office.MsoTriState.msoFalse;
                     range.Font.Italic = run.Italic ? Office.MsoTriState.msoTrue : Office.MsoTriState.msoFalse;
                     range.Font.UnderlineStyle = (Office.MsoTextUnderlineType)run.UnderlineStyle;
+                    range.Font.Strike = (Office.MsoTextStrike)run.Strike;
                     range.Font.Fill.ForeColor.RGB = run.ColorRgb;
                     // Setting the Highlight colour turns marker highlighting on for the range.
                     if (run.HasHighlight)

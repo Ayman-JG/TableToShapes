@@ -202,6 +202,23 @@ namespace TableToShapes.Tests.Unit
             layout.Edges.Should().Contain(e => e.X1 == 100f && e.X2 == 100f && e.Y1 == 0f && e.Y2 == 20f,
                 "the divider on the bordered row is unaffected");
         }
+
+        [Test]
+        public void GivenMergedCellBorderConflictsWithPlainNeighbour_WhenCalculating_ThenPlainBorderWins()
+        {
+            // Merged cell (rows 0-1) reports a black bottom border - a merge artifact - while
+            // the plain cell below reports a white top border. PowerPoint renders the plain one.
+            var table = TableModelBuilder.Grid(3, 1, rowHeight: 20f); // y edges 0,20,40,60
+            table.Cells[1, 0].MergeId = table.Cells[0, 0].MergeId;    // merge rows 0-1
+            table.Cells[0, 0].BorderBottom = TableModelBuilder.VisibleBorder(weight: 1f, color: 0x000000);
+            table.Cells[2, 0].BorderTop = TableModelBuilder.VisibleBorder(weight: 1f, color: 0xFFFFFF);
+
+            var layout = _engine.Calculate(table);
+
+            var shared = layout.Edges.Single(e => e.Y1 == 40f && e.Y2 == 40f);
+            shared.ColorRgb.Should().Be(0xFFFFFF, "a plain cell's border wins over a merged cell's on a shared edge");
+            shared.FromMerged.Should().BeFalse();
+        }
     }
 
     [TestFixture]

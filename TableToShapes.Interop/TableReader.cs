@@ -194,6 +194,7 @@ namespace TableToShapes.Interop
                 Bold = font.Bold == Office.MsoTriState.msoTrue,
                 Italic = font.Italic == Office.MsoTriState.msoTrue,
                 UnderlineStyle = (int)font.UnderlineStyle,
+                Strike = TryGetInt(() => (int)font.Strike),
                 ColorRgb = font.Fill.ForeColor.RGB
             };
 
@@ -218,6 +219,12 @@ namespace TableToShapes.Interop
         {
             try { return get(); }
             catch { return null; }
+        }
+
+        private static int TryGetInt(System.Func<int> get)
+        {
+            try { return get(); }
+            catch { return 0; }
         }
     }
 }
