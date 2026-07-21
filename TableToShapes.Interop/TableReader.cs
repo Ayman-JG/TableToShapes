@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Collections.Generic;
+using System.Linq;
 using TableToShapes.Core.Model;
 using PowerPoint = Microsoft.Office.Interop.PowerPoint;
 using Office = Microsoft.Office.Core;
@@ -19,10 +21,6 @@ namespace TableToShapes.Interop
 
             var model = new TableModel
             {
-                Left = tableShape.Left,
-                Top = tableShape.Top,
-                RowHeights = ReadSizes(i => table.Rows[i].Height, rows),
-                ColumnWidths = ReadSizes(i => table.Columns[i].Width, cols),
                 Cells = new CellModel[rows, cols]
             };
 
@@ -31,15 +29,52 @@ namespace TableToShapes.Interop
             // (throws E_NOTIMPL), so we derive a synthetic merge id from the geometry.
             var mergeIds = new Dictionary<string, int>();
 
+            // Row/column declared sizes are only *minimums*: PowerPoint grows rows to fit
+            // text, so the rendered table is taller than the sum of Row.Height. We instead
+            // reconstruct boundaries from the actual cell rectangles. Collecting BOTH edges
+            // of every cell means interior boundaries hidden by a merge on one row still
+            // appear from the non-merged cells on that row.
+            var xEdges = new SortedSet<float>();
+            var yEdges = new SortedSet<float>();
+
             for (int r = 1; r <= rows; r++)
             {
                 for (int c = 1; c <= cols; c++)
                 {
-                    model.Cells[r - 1, c - 1] = ReadCell(table.Cell(r, c), mergeIds);
+                    var cell = table.Cell(r, c);
+                    var shape = cell.Shape;
+
+                    xEdges.Add(Round(shape.Left));
+                    xEdges.Add(Round(shape.Left + shape.Width));
+                    yEdges.Add(Round(shape.Top));
+                    yEdges.Add(Round(shape.Top + shape.Height));
+
+                    model.Cells[r - 1, c - 1] = ReadCell(cell, shape, mergeIds);
                 }
             }
 
+            model.Left = xEdges.Min;
+            model.Top = yEdges.Min;
+            model.ColumnWidths = EdgesToSizes(xEdges, cols, () => ReadSizes(i => table.Columns[i].Width, cols));
+            model.RowHeights = EdgesToSizes(yEdges, rows, () => ReadSizes(i => table.Rows[i].Height, rows));
+
             return model;
+        }
+
+        private static float Round(float value) => (float)System.Math.Round(value, 2);
+
+        // Distinct cell edges form the track boundaries; consecutive differences are the
+        // per-track sizes. Falls back to declared sizes if an interior boundary is missing
+        // (only when every cell spanning it is merged across it - a rare case).
+        private static IReadOnlyList<float> EdgesToSizes(
+            SortedSet<float> edges, int expected, System.Func<IReadOnlyList<float>> fallback)
+        {
+            if (edges.Count != expected + 1) return fallback();
+
+            var ordered = edges.ToList();
+            var sizes = new float[expected];
+            for (int i = 0; i < expected; i++) sizes[i] = ordered[i + 1] - ordered[i];
+            return sizes;
         }
 
         private static IReadOnlyList<float> ReadSizes(System.Func<int, float> sizeOf, int count)
@@ -49,10 +84,8 @@ namespace TableToShapes.Interop
             return sizes;
         }
 
-        private static CellModel ReadCell(PowerPoint.Cell cell, Dictionary<string, int> mergeIds)
+        private static CellModel ReadCell(PowerPoint.Cell cell, PowerPoint.Shape shape, Dictionary<string, int> mergeIds)
         {
-            var shape = cell.Shape;
-
             string geometryKey = $"{shape.Left:F2}|{shape.Top:F2}|{shape.Width:F2}|{shape.Height:F2}";
             if (!mergeIds.TryGetValue(geometryKey, out int mergeId))
             {
