@@ -79,36 +79,36 @@ namespace TableToShapes.Core.Layout
         }
 
         // A merged cell's border is not a single long line: PowerPoint stores and paints it
-        // as one segment per crossed row/column, and each segment can come from a different
-        // sub-cell. Emitting the border as one full-span line (the old behaviour) meant a
-        // merged cell's border never lined up with the individual borders of the cells on the
-        // far side, so both were drawn and the heavier/darker one bled through (the stray
-        // vertical line in the test render). Decomposing into per-track unit segments lets the
-        // shared-edge de-duplication in AddEdge collapse them correctly.
+        // as one segment per crossed row/column. We emit those per-track unit segments so the
+        // shared-edge de-duplication in AddEdge can collapse them against the neighbouring
+        // cells' borders (the old full-span line never lined up, so both drew and the darker
+        // one bled through).
+        //
+        // The border STYLE for every segment is taken from the merge ANCHOR cell. A merged
+        // cell has one style per side, and - crucially - PowerPoint returns unreliable
+        // (often spuriously visible/black) borders for the *continuation* grid cells of a
+        // merge. Reading those was what painted a phantom divider next to the borderless cell.
         private static void AddCellEdges(
             List<EdgePlacement> edges, TableModel table, CellPlacement p,
             float[] rowOffsets, float[] colOffsets)
         {
             int r = p.Row, c = p.Column, rs = p.RowSpan, cs = p.ColumnSpan;
+            var anchor = table.Cells[r, c];
             float top = rowOffsets[r], bottom = rowOffsets[r + rs];
             float left = colOffsets[c], right = colOffsets[c + cs];
 
-            // Top / bottom: one segment per spanned column, sourced from the edge-most sub-cell.
+            // Top / bottom: one segment per spanned column.
             for (int cc = c; cc < c + cs; cc++)
             {
-                AddEdge(edges, table.Cells[r, cc].BorderTop,
-                    colOffsets[cc], top, colOffsets[cc + 1], top);
-                AddEdge(edges, table.Cells[r + rs - 1, cc].BorderBottom,
-                    colOffsets[cc], bottom, colOffsets[cc + 1], bottom);
+                AddEdge(edges, anchor.BorderTop, colOffsets[cc], top, colOffsets[cc + 1], top);
+                AddEdge(edges, anchor.BorderBottom, colOffsets[cc], bottom, colOffsets[cc + 1], bottom);
             }
 
             // Left / right: one segment per spanned row.
             for (int rr = r; rr < r + rs; rr++)
             {
-                AddEdge(edges, table.Cells[rr, c].BorderLeft,
-                    left, rowOffsets[rr], left, rowOffsets[rr + 1]);
-                AddEdge(edges, table.Cells[rr, c + cs - 1].BorderRight,
-                    right, rowOffsets[rr], right, rowOffsets[rr + 1]);
+                AddEdge(edges, anchor.BorderLeft, left, rowOffsets[rr], left, rowOffsets[rr + 1]);
+                AddEdge(edges, anchor.BorderRight, right, rowOffsets[rr], right, rowOffsets[rr + 1]);
             }
         }
 
