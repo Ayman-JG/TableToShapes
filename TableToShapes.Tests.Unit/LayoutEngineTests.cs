@@ -3,7 +3,6 @@ using FluentAssertions;
 using NUnit.Framework;
 using TableToShapes.Core.Layout;
 using TableToShapes.Core.Model;
-using TableToShapes.Core.Model;
 
 namespace TableToShapes.Tests.Unit
 {

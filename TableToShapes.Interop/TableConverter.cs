@@ -1,5 +1,4 @@
 using System;
-using System;
 using System.Collections.Generic;
 using TableToShapes.Core.Layout;
 using PowerPoint = Microsoft.Office.Interop.PowerPoint;
