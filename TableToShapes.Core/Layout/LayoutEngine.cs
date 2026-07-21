@@ -17,6 +17,11 @@ namespace TableToShapes.Core.Layout
 
             var cells = new List<CellPlacement>();
             var edges = new List<EdgePlacement>();
+            // Segments a cell explicitly declares border-less. An explicit "no border" clears
+            // the shared grid line even if a neighbour still reports a border there (which is
+            // how PowerPoint renders a cell you set to "No Border", and it also cancels the
+            // stray black border a merged cell leaves behind on its outer edge).
+            var suppressors = new List<EdgePlacement>();
 
             for (int r = 0; r < table.RowCount; r++)
             {
@@ -40,9 +45,12 @@ namespace TableToShapes.Core.Layout
                     };
                     cells.Add(placement);
 
-                    AddCellEdges(edges, table, placement, rowOffsets, colOffsets);
+                    AddCellEdges(edges, suppressors, table, placement, rowOffsets, colOffsets);
                 }
             }
+
+            if (suppressors.Count > 0)
+                edges.RemoveAll(e => suppressors.Exists(s => s.GeometricallyEquals(e)));
 
             return new LayoutResult(cells, edges);
         }
@@ -89,8 +97,8 @@ namespace TableToShapes.Core.Layout
         // (often spuriously visible/black) borders for the *continuation* grid cells of a
         // merge. Reading those was what painted a phantom divider next to the borderless cell.
         private static void AddCellEdges(
-            List<EdgePlacement> edges, TableModel table, CellPlacement p,
-            float[] rowOffsets, float[] colOffsets)
+            List<EdgePlacement> edges, List<EdgePlacement> suppressors,
+            TableModel table, CellPlacement p, float[] rowOffsets, float[] colOffsets)
         {
             int r = p.Row, c = p.Column, rs = p.RowSpan, cs = p.ColumnSpan;
             var anchor = table.Cells[r, c];
@@ -100,16 +108,29 @@ namespace TableToShapes.Core.Layout
             // Top / bottom: one segment per spanned column.
             for (int cc = c; cc < c + cs; cc++)
             {
-                AddEdge(edges, anchor.BorderTop, colOffsets[cc], top, colOffsets[cc + 1], top);
-                AddEdge(edges, anchor.BorderBottom, colOffsets[cc], bottom, colOffsets[cc + 1], bottom);
+                HandleSide(edges, suppressors, anchor.BorderTop, colOffsets[cc], top, colOffsets[cc + 1], top);
+                HandleSide(edges, suppressors, anchor.BorderBottom, colOffsets[cc], bottom, colOffsets[cc + 1], bottom);
             }
 
             // Left / right: one segment per spanned row.
             for (int rr = r; rr < r + rs; rr++)
             {
-                AddEdge(edges, anchor.BorderLeft, left, rowOffsets[rr], left, rowOffsets[rr + 1]);
-                AddEdge(edges, anchor.BorderRight, right, rowOffsets[rr], right, rowOffsets[rr + 1]);
+                HandleSide(edges, suppressors, anchor.BorderLeft, left, rowOffsets[rr], left, rowOffsets[rr + 1]);
+                HandleSide(edges, suppressors, anchor.BorderRight, right, rowOffsets[rr], right, rowOffsets[rr + 1]);
             }
+        }
+
+        // A visible border becomes a drawn edge; an explicitly invisible one becomes a
+        // suppressor that cancels any coincident edge (see the note in Calculate).
+        private static void HandleSide(
+            List<EdgePlacement> edges, List<EdgePlacement> suppressors,
+            BorderModel border, float x1, float y1, float x2, float y2)
+        {
+            if (border == null) return;
+            if (border.Visible)
+                AddEdge(edges, border, x1, y1, x2, y2);
+            else
+                suppressors.Add(new EdgePlacement { X1 = x1, Y1 = y1, X2 = x2, Y2 = y2 });
         }
 
         private static void AddEdge(List<EdgePlacement> edges, BorderModel border,

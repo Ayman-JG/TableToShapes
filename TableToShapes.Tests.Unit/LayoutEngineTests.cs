@@ -165,6 +165,43 @@ namespace TableToShapes.Tests.Unit
             var row0Divider = layout.Edges.Single(e => e.X1 == 100f && e.X2 == 100f && e.Y1 == 0f && e.Y2 == 20f);
             row0Divider.Should().NotBeNull();
         }
+
+        [Test]
+        public void GivenBorderlessCell_WhenNeighbourReportsBorder_ThenSharedEdgeIsSuppressed()
+        {
+            var table = TableModelBuilder.Grid(1, 2, colWidth: 100f);
+            // Left cell set fully borderless; right cell keeps its (default) left border on.
+            table.Cells[0, 0].BorderTop = new BorderModel { Visible = false };
+            table.Cells[0, 0].BorderBottom = new BorderModel { Visible = false };
+            table.Cells[0, 0].BorderLeft = new BorderModel { Visible = false };
+            table.Cells[0, 0].BorderRight = new BorderModel { Visible = false };
+
+            var layout = _engine.Calculate(table);
+
+            // "No border" clears the shared divider even though the neighbour still reports one.
+            layout.Edges.Should().NotContain(e => e.X1 == 100f && e.X2 == 100f);
+        }
+
+        [Test]
+        public void GivenMergedCellWithStrayBorderBesideBorderlessCell_WhenCalculating_ThenStrayBorderIsSuppressed()
+        {
+            // Reproduces the diagnostics: a merged cell reports a stray left border, and the
+            // borderless cell beside its lower half must cancel it (but not the upper divider).
+            var table = TableModelBuilder.Grid(2, 2, rowHeight: 20f, colWidth: 100f);
+            table.Cells[0, 1].MergeId = 99;
+            table.Cells[1, 1].MergeId = 99;                     // right column merged across both rows
+            table.Cells[1, 0].BorderTop = new BorderModel { Visible = false };
+            table.Cells[1, 0].BorderBottom = new BorderModel { Visible = false };
+            table.Cells[1, 0].BorderLeft = new BorderModel { Visible = false };
+            table.Cells[1, 0].BorderRight = new BorderModel { Visible = false };
+
+            var layout = _engine.Calculate(table);
+
+            layout.Edges.Should().NotContain(e => e.X1 == 100f && e.X2 == 100f && e.Y1 == 20f && e.Y2 == 40f,
+                "the borderless cell cancels the merged cell's stray divider on its row");
+            layout.Edges.Should().Contain(e => e.X1 == 100f && e.X2 == 100f && e.Y1 == 0f && e.Y2 == 20f,
+                "the divider on the bordered row is unaffected");
+        }
     }
 
     [TestFixture]
