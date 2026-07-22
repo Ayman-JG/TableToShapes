@@ -15,7 +15,13 @@ namespace TableToShapes.Core.Layout
         public float Height { get; set; }
     }
 
-    /// <summary>A unique border line segment to render.</summary>
+    /// <summary>
+    /// One resolved border line segment to render. Each segment corresponds to a single
+    /// physical grid-line unit (one cell edge on one track); the <see cref="LayoutEngine"/>
+    /// resolves the two adjacent cells' borders down to this before emitting it, so no two
+    /// emitted segments overlap. The geometric helpers below remain for tests and any caller
+    /// that needs to compare segments.
+    /// </summary>
     public sealed class EdgePlacement : IEquatable<EdgePlacement>
     {
         public const float Epsilon = 0.01f;
@@ -28,13 +34,6 @@ namespace TableToShapes.Core.Layout
         public int ColorRgb { get; set; }
         public int DashStyle { get; set; }
         public float Transparency { get; set; }
-
-        /// <summary>
-        /// True when this segment came from a merged cell's outer border. Merged cells
-        /// frequently report a stray/automatic border on a shared edge, so a plain cell's
-        /// border on the same edge is preferred (see AddEdge).
-        /// </summary>
-        public bool FromMerged { get; set; }
 
         public bool GeometricallyEquals(EdgePlacement other)
         {
