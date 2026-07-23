@@ -41,6 +41,7 @@ namespace TableToShapes.Interop
                             r, c, cell.MergeId, Fmt(cell.Fill), FirstLine(cell.Text)));
                         sb.AppendLine("    T:" + Fmt(cell.BorderTop) + "  B:" + Fmt(cell.BorderBottom) +
                                       "  L:" + Fmt(cell.BorderLeft) + "  R:" + Fmt(cell.BorderRight));
+                        DumpFrame(sb, cell.Text);
                         DumpRuns(sb, cell.Text);
                     }
                 }
@@ -71,6 +72,15 @@ namespace TableToShapes.Interop
         {
             if (f == null) return "null";
             return f.Visible ? string.Format(CultureInfo.InvariantCulture, "0x{0:X6}", f.ColorRgb & 0xFFFFFF) : "none";
+        }
+
+        private static void DumpFrame(StringBuilder sb, TextModel t)
+        {
+            if (t == null) return;
+            int paragraphs = t.HasText ? t.Paragraphs.Count : 0;
+            sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                "    frame: vAnchor={0} wrap={1} margins(L{2:F1} R{3:F1} T{4:F1} B{5:F1}) paragraphs={6}",
+                t.VerticalAnchor, t.WordWrap, t.MarginLeft, t.MarginRight, t.MarginTop, t.MarginBottom, paragraphs));
         }
 
         private static void DumpRuns(StringBuilder sb, TextModel t)

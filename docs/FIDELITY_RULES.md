@@ -141,9 +141,14 @@ exactly its purpose.
 Legend: **[H]** handled today · **[P]** partial · **[M]** missing.
 
 ### 3.1 Geometry & merges
-- Table origin from the min cell edge. **[H]**
-- Column widths / row heights reconstructed from actual cell rectangles (handles auto-grown
-  rows), falling back to declared track sizes only if an interior boundary is hidden. **[H]**
+- Table origin from the min cell position. **[H]**
+- Column widths / row heights reconstructed from **cell start positions** (Left/Top) plus the
+  table's overall bounds — *not* per-cell Width/Height. This is deliberate: on an auto-grown
+  row PowerPoint reports each cell's `Top` at its true laid-out position but its `Height` at the
+  declared minimum, so using `Top+Height` collapses the row back to its minimum (a two-line cell
+  then overflows below its rectangle). Each track runs to the next track's start, the last closes
+  on the table edge. Falls back to declared sizes only when a track has no cell starting on it
+  (every cell there is merged across it — e.g. two always-merged columns). **[H]**
 - Merge detection: currently a **geometry-hash of `Shape.Left/Top/Width/Height`**. Works but is
   fragile (rounding; assumes every covered cell reports identical geometry). **[P]** — prefer a
   span-based detection, and keep geometry hashing only as a fallback.
