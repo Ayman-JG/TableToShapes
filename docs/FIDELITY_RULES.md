@@ -142,9 +142,11 @@ Legend: **[H]** handled - **[P]** partial - **[M]** not yet.
 - Text effects (glow, shadow, reflection, soft edge). **[M]** - low priority.
 
 ### 2.7 Grouping & placement
-- All generated shapes grouped into one; original table deleted; group origin re-asserted to the
-  table's original `Left/Top`; fills painted first, then border lines on top; partial output
-  removed by name prefix on failure. **[H]**
+- All generated shapes are grouped into one (a single-shape result is kept as-is, since grouping
+  needs two or more); the group origin is re-asserted to the content's true top-left; the
+  original table is deleted only **after** the replacement is built and positioned, so a failure
+  never leaves the slide without a table. Fills are painted first, then border lines on top;
+  on failure the partial or grouped output is removed. **[H]**
 
 ---
 

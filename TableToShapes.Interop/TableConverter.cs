@@ -1,13 +1,13 @@
 using System;
-using System.Collections.Generic;
 using TableToShapes.Core.Layout;
 using PowerPoint = Microsoft.Office.Interop.PowerPoint;
 
 namespace TableToShapes.Interop
 {
     /// <summary>
-    /// End-to-end conversion: read table ? compute layout ? write shapes ?
-    /// delete original ? group replacements.
+    /// End-to-end conversion: read table -> compute layout -> write shapes -> group ->
+    /// delete original. The original table is deleted only after the replacement group has
+    /// been built and positioned, so a failure never destroys the table without a replacement.
     /// </summary>
     public sealed class TableConverter
     {
@@ -30,29 +30,37 @@ namespace TableToShapes.Interop
             if (ConversionDiagnostics.Enabled)
                 ConversionDiagnostics.Dump(model, layout);
 
-            float left = tableShape.Left, top = tableShape.Top;
+            // The generated shapes sit in absolute slide coordinates taken from the actual cell
+            // rectangles, so the replacement's origin is the model's own top-left (which can
+            // differ from the table shape's bounding box).
+            float left = model.Left, top = model.Top;
 
-            List<string> createdNames;
+            PowerPoint.Shape result = null;
             try
             {
-                createdNames = _writer.Write(slide, model, layout);
+                var createdNames = _writer.Write(slide, model, layout);
+
+                // Group the pieces - or, for a degenerate single-shape result (e.g. a 1x1 cell
+                // with no borders), keep the single shape, since Group() requires two or more.
+                result = createdNames.Count > 1
+                    ? slide.Shapes.Range(createdNames.ToArray()).Group()
+                    : slide.Shapes[createdNames[0]];
+                result.Name = "ConvertedTable";
+                // Grouping can nudge coordinates; re-assert the intended origin.
+                result.Left = left;
+                result.Top = top;
             }
             catch
             {
-                // Writing failed part-way; remove any orphan shapes so the slide is
-                // left exactly as we found it (the original table is still intact).
-                RemoveByNamePrefix(slide, ShapeWriter.CreatedShapePrefix);
+                // Nothing has been deleted yet, so leave the slide exactly as we found it:
+                // remove the partial/grouped output. The original table is still intact.
+                if (result != null) result.Delete();               // group (with its children) or single shape
+                else RemoveByNamePrefix(slide, ShapeWriter.CreatedShapePrefix);
                 throw;
             }
 
             tableShape.Delete();
-
-            var group = slide.Shapes.Range(createdNames.ToArray()).Group();
-            group.Name = "ConvertedTable";
-            // Grouping can nudge coordinates; re-assert the original position.
-            group.Left = left;
-            group.Top = top;
-            return group;
+            return result;
         }
 
         private static void RemoveByNamePrefix(PowerPoint.Slide slide, string prefix)

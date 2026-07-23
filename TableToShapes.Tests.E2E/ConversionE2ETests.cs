@@ -78,7 +78,10 @@ namespace TableToShapes.Tests.E2E
 
                 string before = Render(slide, "merged-before.png");
 
-                new TableConverter().Convert(tableShape);
+                var group = new TableConverter().Convert(tableShape);
+
+                group.Type.Should().Be(Office.MsoShapeType.msoGroup);
+                slide.Shapes.Count.Should().Be(1, "the original table must be removed and replaced by one group");
 
                 string after = Render(slide, "merged-after.png");
 
@@ -106,6 +109,36 @@ namespace TableToShapes.Tests.E2E
                 Action act = () => new TableConverter().Convert(rect);
 
                 act.Should().Throw<InvalidOperationException>();
+            }
+            finally
+            {
+                pres.Close();
+            }
+        }
+
+        [Test]
+        public void GivenSingleBorderlessCell_WhenConverted_ThenReplacedByOneShape()
+        {
+            // A 1x1 table with no borders yields a single rectangle (no border lines). Convert
+            // must not attempt to group one shape, and must still remove the original table.
+            var pres = _app.Presentations.Add(Office.MsoTriState.msoFalse);
+            try
+            {
+                var slide = pres.Slides.Add(1, PowerPoint.PpSlideLayout.ppLayoutBlank);
+                var tableShape = slide.Shapes.AddTable(1, 1, 60, 60, 200, 60);
+                var cell = tableShape.Table.Cell(1, 1);
+                cell.Shape.TextFrame2.TextRange.Text = "solo";
+                foreach (PowerPoint.PpBorderType side in new[]
+                {
+                    PowerPoint.PpBorderType.ppBorderTop, PowerPoint.PpBorderType.ppBorderBottom,
+                    PowerPoint.PpBorderType.ppBorderLeft, PowerPoint.PpBorderType.ppBorderRight
+                })
+                    cell.Borders[side].Visible = Office.MsoTriState.msoFalse;
+
+                var result = new TableConverter().Convert(tableShape);
+
+                result.Should().NotBeNull();
+                slide.Shapes.Count.Should().Be(1, "the table is replaced by exactly one shape");
             }
             finally
             {

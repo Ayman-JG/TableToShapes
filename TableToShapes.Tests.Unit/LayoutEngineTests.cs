@@ -131,6 +131,20 @@ namespace TableToShapes.Tests.Unit
         }
 
         [Test]
+        public void R2_GivenSingleCellWithNoBorders_WhenCalculating_ThenOnePlacementAndNoEdges()
+        {
+            // The degenerate case that produces a single shape (and no lines) - the converter
+            // must handle it without trying to group one shape.
+            var table = TableModelBuilder.Grid(1, 1);
+            SetBorderless(table.Cells[0, 0]);
+
+            var layout = _engine.Calculate(table);
+
+            layout.Cells.Should().HaveCount(1);
+            layout.Edges.Should().BeEmpty();
+        }
+
+        [Test]
         public void R2_GivenMergedCell_WhenCalculating_ThenItsOuterBorderSpansEveryTrack()
         {
             var table = TableModelBuilder.Grid(1, 3, colWidth: 100f);

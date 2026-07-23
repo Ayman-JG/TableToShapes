@@ -1,5 +1,3 @@
-using System;
-
 namespace TableToShapes.Core.Layout
 {
     /// <summary>A resolved cell rectangle on the slide (merge anchors only).</summary>
@@ -19,10 +17,9 @@ namespace TableToShapes.Core.Layout
     /// One resolved border line segment to render. Each segment corresponds to a single
     /// physical grid-line unit (one cell edge on one track); the <see cref="LayoutEngine"/>
     /// resolves the two adjacent cells' borders down to this before emitting it, so no two
-    /// emitted segments overlap. The geometric helpers below remain for tests and any caller
-    /// that needs to compare segments.
+    /// emitted segments overlap.
     /// </summary>
-    public sealed class EdgePlacement : IEquatable<EdgePlacement>
+    public sealed class EdgePlacement
     {
         public const float Epsilon = 0.01f;
 
@@ -35,6 +32,10 @@ namespace TableToShapes.Core.Layout
         public int DashStyle { get; set; }
         public float Transparency { get; set; }
 
+        /// <summary>
+        /// Endpoint comparison that ignores direction and tolerates sub-pixel drift. Used by
+        /// tests to locate a segment regardless of which end is listed first.
+        /// </summary>
         public bool GeometricallyEquals(EdgePlacement other)
         {
             if (other == null) return false;
@@ -42,28 +43,7 @@ namespace TableToShapes.Core.Layout
                 || (SamePoint(X1, Y1, other.X2, other.Y2) && SamePoint(X2, Y2, other.X1, other.Y1));
         }
 
-        public bool Equals(EdgePlacement other)
-        {
-            return other != null
-                && GeometricallyEquals(other)
-                && Math.Abs(Weight - other.Weight) < Epsilon
-                && ColorRgb == other.ColorRgb
-                && DashStyle == other.DashStyle;
-        }
-
-        public override bool Equals(object obj) => Equals(obj as EdgePlacement);
-
-        public override int GetHashCode()
-        {
-            // Order-independent endpoint hash so reversed segments collide.
-            int p1 = Quantize(X1) * 397 ^ Quantize(Y1);
-            int p2 = Quantize(X2) * 397 ^ Quantize(Y2);
-            return (p1 ^ p2) * 31 + ColorRgb;
-        }
-
-        private static int Quantize(float v) => (int)Math.Round(v / Epsilon);
-
         private static bool SamePoint(float ax, float ay, float bx, float by)
-            => Math.Abs(ax - bx) < Epsilon && Math.Abs(ay - by) < Epsilon;
+            => System.Math.Abs(ax - bx) < Epsilon && System.Math.Abs(ay - by) < Epsilon;
     }
 }

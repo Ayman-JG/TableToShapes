@@ -45,9 +45,12 @@ limitations* below) would need further work to fully meet production and custome
   off so the rectangles never resize.
 - **Theme colours are resolved to literal RGB** via `ForeColor.RGB` - required for pixel fidelity
   (trade-off: the group will not re-theme).
-- After `Group()`, `Left` / `Top` are re-asserted because grouping can nudge coordinates. If
-  writing fails partway, the partial shapes are removed by name prefix so the slide is left as it
-  was found.
+- The shapes are written, grouped, and repositioned to the content's true origin **before** the
+  original table is deleted, so a failure never leaves the slide without a table. `Left`/`Top`
+  are re-asserted after `Group()` because grouping can nudge coordinates; a degenerate
+  single-shape result (e.g. a borderless 1x1 cell) is kept as-is since `Group()` needs two or
+  more shapes. On any failure the partial or grouped output is removed and the original table is
+  left untouched.
 
 ## Behaviour and caveats
 
@@ -133,6 +136,9 @@ edges) to `%TEMP%\TableToShapes.Diagnostics.log`. It is off by default.
 - Diagonal cell borders (`ppBorderDiagonalDown/Up`) and rotated tables are not handled.
 - E2E tests require a UI-capable session with PowerPoint; exclude them from headless CI with
   `--filter TestCategory!=E2E`.
+- COM interop objects are released deterministically at the collection level; deeper per-cell
+  RCWs are left to the garbage collector (acceptable for an in-process add-in). A full
+  deterministic release pass is a possible follow-up.
 
 `docs/FIDELITY_RULES.md` has the full property-coverage matrix (handled / partial / not yet) and
 the border-resolution caveats.

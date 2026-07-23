@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Runtime.InteropServices;
 using TableToShapes.Core.Model;
 using PowerPoint = Microsoft.Office.Interop.PowerPoint;
 using Office = Microsoft.Office.Core;
@@ -15,52 +17,78 @@ namespace TableToShapes.Interop
         public TableModel Read(PowerPoint.Shape tableShape)
         {
             var table = tableShape.Table;
-            int rows = table.Rows.Count;
-            int cols = table.Columns.Count;
-
-            var model = new TableModel
+            // Hoist the Rows/Columns collections: fetched once instead of on every access,
+            // and released deterministically in the finally below.
+            var rowsColl = table.Rows;
+            var colsColl = table.Columns;
+            try
             {
-                Cells = new CellModel[rows, cols]
-            };
+                int rows = rowsColl.Count;
+                int cols = colsColl.Count;
 
-            // Cells in the same merge share one underlying shape, so all of them report
-            // identical shape geometry. Shape.Id is not implemented for table cell shapes
-            // (throws E_NOTIMPL), so we derive a synthetic merge id from the geometry.
-            var mergeIds = new Dictionary<string, int>();
-
-            // Row/column declared sizes are only *minimums*: PowerPoint grows rows to fit
-            // text, so the rendered table is taller than the sum of Row.Height. We instead
-            // reconstruct boundaries from the actual cell rectangles. Collecting BOTH edges
-            // of every cell means interior boundaries hidden by a merge on one row still
-            // appear from the non-merged cells on that row.
-            var xEdges = new SortedSet<float>();
-            var yEdges = new SortedSet<float>();
-
-            for (int r = 1; r <= rows; r++)
-            {
-                for (int c = 1; c <= cols; c++)
+                var model = new TableModel
                 {
-                    var cell = table.Cell(r, c);
-                    var shape = cell.Shape;
+                    Cells = new CellModel[rows, cols]
+                };
 
-                    xEdges.Add(Round(shape.Left));
-                    xEdges.Add(Round(shape.Left + shape.Width));
-                    yEdges.Add(Round(shape.Top));
-                    yEdges.Add(Round(shape.Top + shape.Height));
+                // Cells in the same merge share one underlying shape, so all of them report
+                // identical shape geometry. Shape.Id is not implemented for table cell shapes
+                // (throws E_NOTIMPL), so we derive a synthetic merge id from the geometry.
+                var mergeIds = new Dictionary<string, int>();
 
-                    model.Cells[r - 1, c - 1] = ReadCell(cell, shape, mergeIds);
+                // Row/column declared sizes are only *minimums*: PowerPoint grows rows to fit
+                // text, so the rendered table is taller than the sum of Row.Height. We instead
+                // reconstruct boundaries from the actual cell rectangles. Collecting BOTH edges
+                // of every cell means interior boundaries hidden by a merge on one row still
+                // appear from the non-merged cells on that row.
+                var xEdges = new SortedSet<float>();
+                var yEdges = new SortedSet<float>();
+
+                for (int r = 1; r <= rows; r++)
+                {
+                    for (int c = 1; c <= cols; c++)
+                    {
+                        var cell = table.Cell(r, c);
+                        var shape = cell.Shape;
+
+                        xEdges.Add(Round(shape.Left));
+                        xEdges.Add(Round(shape.Left + shape.Width));
+                        yEdges.Add(Round(shape.Top));
+                        yEdges.Add(Round(shape.Top + shape.Height));
+
+                        model.Cells[r - 1, c - 1] = ReadCell(cell, shape, mergeIds);
+                    }
                 }
+
+                model.Left = xEdges.Min;
+                model.Top = yEdges.Min;
+                model.ColumnWidths = EdgesToSizes(xEdges, cols, () => ReadSizes(i => colsColl[i].Width, cols));
+                model.RowHeights = EdgesToSizes(yEdges, rows, () => ReadSizes(i => rowsColl[i].Height, rows));
+
+                return model;
             }
-
-            model.Left = xEdges.Min;
-            model.Top = yEdges.Min;
-            model.ColumnWidths = EdgesToSizes(xEdges, cols, () => ReadSizes(i => table.Columns[i].Width, cols));
-            model.RowHeights = EdgesToSizes(yEdges, rows, () => ReadSizes(i => table.Rows[i].Height, rows));
-
-            return model;
+            finally
+            {
+                // Release the top-level collection RCWs. Per-cell Cell/Shape objects are left to
+                // the GC on purpose: merged cells share an underlying shape, and PowerPoint can
+                // hand back a cached RCW for it, so releasing per iteration risks using a
+                // separated RCW on a later cell. A deeper deterministic release pass is a
+                // possible follow-up.
+                Release(colsColl);
+                Release(rowsColl);
+                Release(table);
+            }
         }
 
         private static float Round(float value) => (float)System.Math.Round(value, 2);
+
+        private static string Key(float value) => Round(value).ToString(CultureInfo.InvariantCulture);
+
+        private static void Release(object comObject)
+        {
+            if (comObject != null && Marshal.IsComObject(comObject))
+                Marshal.ReleaseComObject(comObject);
+        }
 
         // Distinct cell edges form the track boundaries; consecutive differences are the
         // per-track sizes. Falls back to declared sizes if an interior boundary is missing
@@ -85,7 +113,10 @@ namespace TableToShapes.Interop
 
         private static CellModel ReadCell(PowerPoint.Cell cell, PowerPoint.Shape shape, Dictionary<string, int> mergeIds)
         {
-            string geometryKey = $"{shape.Left:F2}|{shape.Top:F2}|{shape.Width:F2}|{shape.Height:F2}";
+            // Culture-invariant, and rounded the same way as the edge sets so the key and the
+            // geometry stay consistent regardless of the machine's decimal separator.
+            string geometryKey = string.Join("|",
+                Key(shape.Left), Key(shape.Top), Key(shape.Width), Key(shape.Height));
             if (!mergeIds.TryGetValue(geometryKey, out int mergeId))
             {
                 mergeId = mergeIds.Count + 1;

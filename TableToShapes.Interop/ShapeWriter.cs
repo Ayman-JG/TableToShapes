@@ -22,18 +22,10 @@ namespace TableToShapes.Interop
 
             // Paint order matters: fills first, borders on top (mirrors table rendering).
             foreach (var cell in layout.Cells)
-            {
-                var shape = WriteCell(slide, table.Cells[cell.Row, cell.Column], cell);
-                shape.Name = CreatedShapePrefix + shape.Name;
-                names.Add(shape.Name);
-            }
+                names.Add(WriteCell(slide, table.Cells[cell.Row, cell.Column], cell).Name);
 
             foreach (var edge in layout.Edges)
-            {
-                var shape = WriteEdge(slide, edge);
-                shape.Name = CreatedShapePrefix + shape.Name;
-                names.Add(shape.Name);
-            }
+                names.Add(WriteEdge(slide, edge).Name);
 
             return names;
         }
@@ -42,6 +34,9 @@ namespace TableToShapes.Interop
         {
             var rect = slide.Shapes.AddShape(
                 Office.MsoAutoShapeType.msoShapeRectangle, p.Left, p.Top, p.Width, p.Height);
+            // Name immediately, before any further property set, so partial-failure cleanup by
+            // name prefix can always find this shape.
+            rect.Name = CreatedShapePrefix + rect.Name;
 
             rect.Line.Visible = Office.MsoTriState.msoFalse; // borders are separate shapes
 
@@ -64,9 +59,11 @@ namespace TableToShapes.Interop
         private static PowerPoint.Shape WriteEdge(PowerPoint.Slide slide, EdgePlacement edge)
         {
             var line = slide.Shapes.AddLine(edge.X1, edge.Y1, edge.X2, edge.Y2);
+            line.Name = CreatedShapePrefix + line.Name; // name before other sets (see WriteCell)
             if (edge.Weight > 0f) line.Line.Weight = edge.Weight;
             line.Line.ForeColor.RGB = edge.ColorRgb;
-            line.Line.DashStyle = (Office.MsoLineDashStyle)edge.DashStyle;
+            // Valid dash styles start at 1 (solid); skip 0/negative ("Mixed") sentinels.
+            if (edge.DashStyle > 0) line.Line.DashStyle = (Office.MsoLineDashStyle)edge.DashStyle;
             line.Line.Transparency = Clamp01(edge.Transparency);
             return line;
         }
@@ -85,7 +82,9 @@ namespace TableToShapes.Interop
             frame.MarginRight = text.MarginRight;
             frame.MarginTop = text.MarginTop;
             frame.MarginBottom = text.MarginBottom;
-            frame.VerticalAnchor = (Office.MsoVerticalAnchor)text.VerticalAnchor;
+            // Guard against a "Mixed" sentinel (negative) that would throw when cast back.
+            if (text.VerticalAnchor > 0)
+                frame.VerticalAnchor = (Office.MsoVerticalAnchor)text.VerticalAnchor;
             frame.WordWrap = text.WordWrap ? Office.MsoTriState.msoTrue : Office.MsoTriState.msoFalse;
             // Never let the rectangle resize itself, or text will shift.
             frame.AutoSize = Office.MsoAutoSize.msoAutoSizeNone;
@@ -103,9 +102,12 @@ namespace TableToShapes.Interop
             var builder = new StringBuilder();
             foreach (var para in text.Paragraphs)
                 foreach (var run in para.Runs)
-                    builder.Append(run.Text);
+                    if (run.Text != null) builder.Append(run.Text);
 
-            frame.TextRange.Text = builder.ToString();
+            // Hoist TextRange: it is used for the text, every character range and the paragraph
+            // formatting, so fetching it once avoids re-creating the COM object each time.
+            var textRange = frame.TextRange;
+            textRange.Text = builder.ToString();
 
             int charIndex = 1;
             int paraIndex = 1;
@@ -113,11 +115,11 @@ namespace TableToShapes.Interop
             {
                 foreach (var run in para.Runs)
                 {
-                    int length = run.Text.Length;
+                    int length = run.Text?.Length ?? 0;
                     // Characters[index, 0] throws "value out of range"; skip empty runs.
                     if (length == 0) continue;
 
-                    var range = frame.TextRange.Characters[charIndex, length];
+                    var range = textRange.Characters[charIndex, length];
                     range.Font.Name = run.FontName;
                     if (!string.IsNullOrEmpty(run.FontNameComplexScript))
                         range.Font.NameComplexScript = run.FontNameComplexScript;
@@ -126,8 +128,11 @@ namespace TableToShapes.Interop
                     range.Font.Size = run.FontSize;
                     range.Font.Bold = run.Bold ? Office.MsoTriState.msoTrue : Office.MsoTriState.msoFalse;
                     range.Font.Italic = run.Italic ? Office.MsoTriState.msoTrue : Office.MsoTriState.msoFalse;
-                    range.Font.UnderlineStyle = (Office.MsoTextUnderlineType)run.UnderlineStyle;
-                    range.Font.Strike = (Office.MsoTextStrike)run.Strike;
+                    // 0 = none is valid; a negative "Mixed" sentinel is skipped.
+                    if (run.UnderlineStyle >= 0)
+                        range.Font.UnderlineStyle = (Office.MsoTextUnderlineType)run.UnderlineStyle;
+                    if (run.Strike >= 0)
+                        range.Font.Strike = (Office.MsoTextStrike)run.Strike;
                     range.Font.Fill.ForeColor.RGB = run.ColorRgb;
                     // Setting the Highlight colour turns marker highlighting on for the range.
                     if (run.HasHighlight)
@@ -136,9 +141,9 @@ namespace TableToShapes.Interop
                 }
 
                 // Guard against paragraph-count drift between model and live text.
-                if (paraIndex <= frame.TextRange.Paragraphs.Count)
+                if (paraIndex <= textRange.Paragraphs.Count)
                 {
-                    var paraRange = frame.TextRange.Paragraphs[paraIndex, 1];
+                    var paraRange = textRange.Paragraphs[paraIndex, 1];
                     paraRange.ParagraphFormat.Alignment = (Office.MsoParagraphAlignment)para.Alignment;
                     paraRange.ParagraphFormat.SpaceBefore = para.SpaceBefore;
                     paraRange.ParagraphFormat.SpaceAfter = para.SpaceAfter;
