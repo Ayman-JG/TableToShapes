@@ -141,14 +141,13 @@ exactly its purpose.
 Legend: **[H]** handled today · **[P]** partial · **[M]** missing.
 
 ### 3.1 Geometry & merges
-- Table origin from the min cell position. **[H]**
-- Column widths / row heights reconstructed from **cell start positions** (Left/Top) plus the
-  table's overall bounds — *not* per-cell Width/Height. This is deliberate: on an auto-grown
-  row PowerPoint reports each cell's `Top` at its true laid-out position but its `Height` at the
-  declared minimum, so using `Top+Height` collapses the row back to its minimum (a two-line cell
-  then overflows below its rectangle). Each track runs to the next track's start, the last closes
-  on the table edge. Falls back to declared sizes only when a track has no cell starting on it
-  (every cell there is merged across it — e.g. two always-merged columns). **[H]**
+- Table origin from the min cell edge. **[H]**
+- Column widths / row heights reconstructed from actual cell rectangles, falling back to declared
+  track sizes only if an interior boundary is hidden. **[P]** — auto-grown (multi-line) rows are
+  a known risk: if PowerPoint under-reports a cell's `Height`, the row can collapse to its
+  declared minimum. Needs confirming from a real multi-line diagnostics dump before changing
+  (an earlier position-based attempt was reverted because it didn't fix the observed issue, which
+  turned out to be the text writer — see §3.6).
 - Merge detection: currently a **geometry-hash of `Shape.Left/Top/Width/Height`**. Works but is
   fragile (rounding; assumes every covered cell reports identical geometry). **[P]** — prefer a
   span-based detection, and keep geometry hashing only as a fallback.
@@ -189,8 +188,12 @@ Legend: **[H]** handled today · **[P]** partial · **[M]** missing.
 - Language id (affects spell-check only; skip). **[skip]**
 - Hyperlinks. **[M]** — preserve the link, not just the styling.
 - Text effects: glow, shadow, reflection, soft edge. **[M]** — low priority.
-- Rule: apply run formatting over exact character ranges after setting the full string;
-  paragraph breaks are `\r` and the char cursor advances one per break (already done).
+- Rule: write run text **verbatim** (concatenate `run.Text` as read) then apply run formatting
+  over exact character ranges. A paragraph's final run already carries its break character, so the
+  concatenation reproduces the original and the offsets stay aligned. Do **not** synthesise extra
+  `\r` separators between paragraphs — doing so double-inserts breaks (displacing later lines) and
+  shifts every subsequent offset (dropping runs). This was the multi-line regression seen in the
+  3rd test deck.
 
 ### 3.7 Grouping & placement
 - All generated shapes grouped into one; original table deleted; group origin re-asserted to

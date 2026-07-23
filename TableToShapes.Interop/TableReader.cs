@@ -28,20 +28,13 @@ namespace TableToShapes.Interop
             // (throws E_NOTIMPL), so we derive a synthetic merge id from the geometry.
             var mergeIds = new Dictionary<string, int>();
 
-            // Declared Row.Height / Column.Width are only *minimums*: PowerPoint grows a row to
-            // fit its text, so the rendered table is taller than the sum of Row.Height. We must
-            // reconstruct the real track sizes from the laid-out cell rectangles.
-            //
-            // Crucially we use only cell *positions* (Left / Top) plus the table's overall
-            // bounds - never per-cell Width/Height. On an auto-grown row PowerPoint reports each
-            // cell's Top at its true laid-out position but its Height at the declared minimum, so
-            // Top+Height lands short of the next row and mixing the two produced spurious edges
-            // (which used to trip the count check and collapse the row back to its minimum). The
-            // next track's start position is the reliable boundary; the final track closes on the
-            // table's own edge. Merge continuation cells report the anchor's position, which is a
-            // duplicate and harmless.
-            var colLefts = new SortedSet<float>();
-            var rowTops = new SortedSet<float>();
+            // Row/column declared sizes are only *minimums*: PowerPoint grows rows to fit
+            // text, so the rendered table is taller than the sum of Row.Height. We instead
+            // reconstruct boundaries from the actual cell rectangles. Collecting BOTH edges
+            // of every cell means interior boundaries hidden by a merge on one row still
+            // appear from the non-merged cells on that row.
+            var xEdges = new SortedSet<float>();
+            var yEdges = new SortedSet<float>();
 
             for (int r = 1; r <= rows; r++)
             {
@@ -50,42 +43,36 @@ namespace TableToShapes.Interop
                     var cell = table.Cell(r, c);
                     var shape = cell.Shape;
 
-                    colLefts.Add(Round(shape.Left));
-                    rowTops.Add(Round(shape.Top));
+                    xEdges.Add(Round(shape.Left));
+                    xEdges.Add(Round(shape.Left + shape.Width));
+                    yEdges.Add(Round(shape.Top));
+                    yEdges.Add(Round(shape.Top + shape.Height));
 
                     model.Cells[r - 1, c - 1] = ReadCell(cell, shape, mergeIds);
                 }
             }
 
-            float tableRight = Round(tableShape.Left + tableShape.Width);
-            float tableBottom = Round(tableShape.Top + tableShape.Height);
-
-            model.Left = colLefts.Min;
-            model.Top = rowTops.Min;
-            model.ColumnWidths = StartsToSizes(colLefts, cols, tableRight, () => ReadSizes(i => table.Columns[i].Width, cols));
-            model.RowHeights = StartsToSizes(rowTops, rows, tableBottom, () => ReadSizes(i => table.Rows[i].Height, rows));
+            model.Left = xEdges.Min;
+            model.Top = yEdges.Min;
+            model.ColumnWidths = EdgesToSizes(xEdges, cols, () => ReadSizes(i => table.Columns[i].Width, cols));
+            model.RowHeights = EdgesToSizes(yEdges, rows, () => ReadSizes(i => table.Rows[i].Height, rows));
 
             return model;
         }
 
         private static float Round(float value) => (float)System.Math.Round(value, 2);
 
-        // Turns the distinct track-start positions into per-track sizes: each track runs from its
-        // own start to the next track's start, and the last track closes on <paramref name="end"/>
-        // (the table's right/bottom edge). Falls back to declared sizes only if a start is missing
-        // - i.e. every cell on some track is merged across it, so no cell begins there.
-        private static IReadOnlyList<float> StartsToSizes(
-            SortedSet<float> starts, int expected, float end, System.Func<IReadOnlyList<float>> fallback)
+        // Distinct cell edges form the track boundaries; consecutive differences are the
+        // per-track sizes. Falls back to declared sizes if an interior boundary is missing
+        // (only when every cell spanning it is merged across it - a rare case).
+        private static IReadOnlyList<float> EdgesToSizes(
+            SortedSet<float> edges, int expected, System.Func<IReadOnlyList<float>> fallback)
         {
-            if (starts.Count != expected) return fallback();
+            if (edges.Count != expected + 1) return fallback();
 
-            var ordered = starts.ToList();
+            var ordered = edges.ToList();
             var sizes = new float[expected];
-            for (int i = 0; i < expected; i++)
-            {
-                float next = (i < expected - 1) ? ordered[i + 1] : end;
-                sizes[i] = next - ordered[i];
-            }
+            for (int i = 0; i < expected; i++) sizes[i] = ordered[i + 1] - ordered[i];
             return sizes;
         }
 

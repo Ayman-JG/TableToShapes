@@ -93,16 +93,17 @@ namespace TableToShapes.Interop
             if (!text.HasText) return;
 
             // Insert the full plain text, then re-apply run formatting over exact character
-            // ranges. This avoids the clipboard (unreliable in automation). Paragraphs are
-            // joined with a carriage return - the paragraph separator in TextRange2 - so
-            // multi-paragraph cells keep their line breaks (and our char offsets stay aligned).
+            // ranges. This avoids the clipboard (unreliable in automation).
+            //
+            // The run text is written back VERBATIM. Each run's text as read already contains any
+            // paragraph/line-break characters (a paragraph's final run carries its terminator), so
+            // concatenating the runs reproduces the original exactly - and keeps the character
+            // offsets below aligned. Do NOT synthesise extra separators between paragraphs: that
+            // double-inserts breaks (displacing lines) and shifts every subsequent offset.
             var builder = new StringBuilder();
-            for (int p = 0; p < text.Paragraphs.Count; p++)
-            {
-                if (p > 0) builder.Append('\r');
-                foreach (var run in text.Paragraphs[p].Runs)
+            foreach (var para in text.Paragraphs)
+                foreach (var run in para.Runs)
                     builder.Append(run.Text);
-            }
 
             frame.TextRange.Text = builder.ToString();
 
@@ -133,9 +134,6 @@ namespace TableToShapes.Interop
                         range.Font.Highlight.RGB = run.HighlightColorRgb;
                     charIndex += length;
                 }
-
-                // Account for the paragraph-break character inserted between paragraphs.
-                if (paraIndex < text.Paragraphs.Count) charIndex += 1;
 
                 // Guard against paragraph-count drift between model and live text.
                 if (paraIndex <= frame.TextRange.Paragraphs.Count)
