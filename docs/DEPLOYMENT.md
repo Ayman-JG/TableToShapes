@@ -51,13 +51,13 @@ on the Home tab.
 1. **Manufacturer / UpgradeCode.** Set `Manufacturer` in `Package.wxs`. Keep the `UpgradeCode`
    GUID **stable across versions** (it is what lets a new MSI upgrade an old one); bump `Version`
    each release.
-2. **Which files ship.** The interop types are **embedded** (`<EmbedInteropTypes>true</EmbedInteropTypes>`
-   is set on the interop `PackageReference`s in `TableToShapes.Interop.csproj` and
-   `TableToShapes.AddIn.csproj`), so the Office PIA DLLs are not needed at runtime and only the
-   three `TableToShapes.*.dll` ship - which is exactly what the MSI installs. After building,
-   confirm `TableToShapes.AddIn\bin\Release\net48` contains just those three DLLs; if a
-   non-embeddable interop assembly (e.g. `Extensibility.dll`) still appears, add a `<File>`
-   component for it in `Package.wxs` (there is a commented placeholder there).
+2. **Which files ship.** The MSI **harvests every `*.dll`** from the add-in's build output
+   (`<Files Include="...\*.dll" />` in `Package.wxs`), so it ships our three libraries **and** the
+   Office interop assemblies that the build copies alongside them (`Microsoft.Office.Interop.PowerPoint.dll`,
+   `office.dll`, etc.). `.pdb` files are excluded. This is deliberate: `EmbedInteropTypes` is not
+   honoured for these particular interop NuGet packages, so the PIA DLLs are needed at runtime and
+   must be deployed - harvesting keeps the installer correct regardless of which interop DLLs land
+   in `bin`.
 3. **`CodeBase` path.** The MSI writes `CodeBase = file:///[installed path]`. This is the one item
    most worth verifying on a real install - confirm the button appears. If fusion rejects the
    path (spaces / backslashes), either install to a space-free folder or switch the value to the

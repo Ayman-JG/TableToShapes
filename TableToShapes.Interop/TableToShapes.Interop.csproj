@@ -7,15 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Embed the interop types (NoPIA) so the PIA DLLs are NOT needed at runtime - only the
-         three TableToShapes.*.dll ship. -->
-    <PackageReference Include="Microsoft.Office.Interop.PowerPoint" Version="15.0.4420.1018">
-      <EmbedInteropTypes>true</EmbedInteropTypes>
-    </PackageReference>
+    <PackageReference Include="Microsoft.Office.Interop.PowerPoint" Version="15.0.4420.1018" />
     <!-- Provides office.dll (Microsoft.Office.Core: MsoTriState, TextFrame2, ...) without needing Office installed at build time. -->
-    <PackageReference Include="MicrosoftOfficeCore" Version="15.0.0">
-      <EmbedInteropTypes>true</EmbedInteropTypes>
-    </PackageReference>
+    <PackageReference Include="MicrosoftOfficeCore" Version="15.0.0" />
   </ItemGroup>
 
   <ItemGroup>

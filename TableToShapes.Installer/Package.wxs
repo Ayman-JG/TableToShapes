@@ -32,19 +32,14 @@
       <ComponentRef Id="OfficeAddin" />
     </Feature>
 
-    <!-- 1. Assemblies. Interop types are embedded (see DEPLOYMENT.md), so only these three DLLs
-            are needed. If a non-embeddable interop assembly (e.g. Extensibility.dll) still lands
-            in bin, add a <File> component for it here. -->
+    <!-- 1. Assemblies. The main add-in DLL is listed explicitly so the COM CodeBase below can
+            reference it by id; every other runtime *.dll in the build output (our libraries plus
+            the Office interop assemblies) is harvested automatically. .pdb files are not shipped. -->
     <ComponentGroup Id="AddInFiles" Directory="INSTALLFOLDER">
       <Component>
         <File Id="AddInDll" Source="$(var.AddInBin)\TableToShapes.AddIn.dll" />
       </Component>
-      <Component>
-        <File Source="$(var.AddInBin)\TableToShapes.Interop.dll" />
-      </Component>
-      <Component>
-        <File Source="$(var.AddInBin)\TableToShapes.Core.dll" />
-      </Component>
+      <Files Include="$(var.AddInBin)\*.dll" Exclude="$(var.AddInBin)\TableToShapes.AddIn.dll" />
     </ComponentGroup>
 
     <!-- 2. Managed COM class registration (mscoree shim). -->
