@@ -174,6 +174,6 @@ Legend: **[H]** handled - **[P]** partial - **[M]** not yet.
 - **One place for precedence.** All border precedence lives in `Resolve`, so a question about
   "what should PowerPoint draw here" is answered by a small targeted table rather than scattered
   special cases.
-- **Optional diagnostics.** With `TABLETOSHAPES_DIAGNOSTICS` set, each conversion logs the parsed
-  cells, runs and resolved edges - useful when reconciling a fidelity difference against what the
-  reader actually captured.
+- **Structured logging.** The pipeline logs through an injected `ILogger` (see the README). At
+  `Debug` level each conversion records the full parsed model and resolved edges, useful when
+  reconciling a fidelity difference against what the reader actually captured.

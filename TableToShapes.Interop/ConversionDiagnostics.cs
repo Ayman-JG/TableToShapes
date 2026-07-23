@@ -1,7 +1,5 @@
-using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
 using System.Text;
 using TableToShapes.Core.Layout;
 using TableToShapes.Core.Model;
@@ -9,67 +7,45 @@ using TableToShapes.Core.Model;
 namespace TableToShapes.Interop
 {
     /// <summary>
-    /// Optional troubleshooting aid: writes a human-readable snapshot of the parsed
-    /// <see cref="TableModel"/> and the resolved border segments to a log file. Because the
-    /// conversion runs against live COM objects (no debugger-friendly surface), this makes it
-    /// possible to see exactly what the reader captured and what the layout emitted.
-    ///
-    /// Disabled by default. Enable by setting the <c>TABLETOSHAPES_DIAGNOSTICS</c> environment
-    /// variable (to any non-empty value) before running PowerPoint; output goes to
-    /// <see cref="DefaultPath"/>. All methods are best-effort and never throw.
+    /// Builds a human-readable snapshot of the parsed <see cref="TableModel"/> and the resolved
+    /// border segments. This is pure string formatting (no I/O); the converter logs it at Debug
+    /// level so it only appears when detailed logging is switched on.
     /// </summary>
     public static class ConversionDiagnostics
     {
-        private const string EnableVariable = "TABLETOSHAPES_DIAGNOSTICS";
-
-        /// <summary>True when the <c>TABLETOSHAPES_DIAGNOSTICS</c> environment variable is set.</summary>
-        public static bool Enabled =>
-            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(EnableVariable));
-
-        public static string DefaultPath =>
-            Path.Combine(Path.GetTempPath(), "TableToShapes.Diagnostics.log");
-
-        public static void Dump(TableModel model, LayoutResult layout, string path = null)
+        public static string Describe(TableModel model, LayoutResult layout)
         {
-            try
+            var sb = new StringBuilder();
+            sb.AppendLine("table snapshot:");
+            sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                "  Grid {0}x{1}  Left={2:F2} Top={3:F2}",
+                model.RowCount, model.ColumnCount, model.Left, model.Top));
+            sb.AppendLine("  ColWidths=[" + Join(model.ColumnWidths) + "]  RowHeights=[" + Join(model.RowHeights) + "]");
+
+            for (int r = 0; r < model.RowCount; r++)
             {
-                path = path ?? DefaultPath;
-                var sb = new StringBuilder();
-                sb.AppendLine("=== TableToShapes diagnostics @ " +
-                    DateTime.Now.ToString("O", CultureInfo.InvariantCulture) + " ===");
-                sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                    "Grid {0}x{1}  Left={2:F2} Top={3:F2}",
-                    model.RowCount, model.ColumnCount, model.Left, model.Top));
-                sb.AppendLine("ColWidths=[" + Join(model.ColumnWidths) + "]  RowHeights=[" + Join(model.RowHeights) + "]");
-                sb.AppendLine();
-
-                for (int r = 0; r < model.RowCount; r++)
+                for (int c = 0; c < model.ColumnCount; c++)
                 {
-                    for (int c = 0; c < model.ColumnCount; c++)
-                    {
-                        var cell = model.Cells[r, c];
-                        sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                            "cell[{0},{1}] merge={2} fill={3} text=\"{4}\"",
-                            r, c, cell.MergeId, Fmt(cell.Fill), FirstLine(cell.Text)));
-                        sb.AppendLine("    T:" + Fmt(cell.BorderTop) + "  B:" + Fmt(cell.BorderBottom) +
-                                      "  L:" + Fmt(cell.BorderLeft) + "  R:" + Fmt(cell.BorderRight));
-                        DumpFrame(sb, cell.Text);
-                        DumpRuns(sb, cell.Text);
-                    }
-                }
-
-                sb.AppendLine();
-                sb.AppendLine("--- resolved edges (" + layout.Edges.Count + ") ---");
-                foreach (var e in layout.Edges)
-                {
+                    var cell = model.Cells[r, c];
                     sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                        "  ({0:F2},{1:F2})->({2:F2},{3:F2}) w={4:F2} color=0x{5:X6} dash={6}",
-                        e.X1, e.Y1, e.X2, e.Y2, e.Weight, e.ColorRgb & 0xFFFFFF, e.DashStyle));
+                        "  cell[{0},{1}] merge={2} fill={3} text=\"{4}\"",
+                        r, c, cell.MergeId, Fmt(cell.Fill), FirstLine(cell.Text)));
+                    sb.AppendLine("      T:" + Fmt(cell.BorderTop) + "  B:" + Fmt(cell.BorderBottom) +
+                                  "  L:" + Fmt(cell.BorderLeft) + "  R:" + Fmt(cell.BorderRight));
+                    DumpFrame(sb, cell.Text);
+                    DumpRuns(sb, cell.Text);
                 }
-
-                File.AppendAllText(path, sb.ToString() + Environment.NewLine);
             }
-            catch { /* diagnostics must never affect a conversion */ }
+
+            sb.AppendLine("  resolved edges (" + layout.Edges.Count + "):");
+            foreach (var e in layout.Edges)
+            {
+                sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                    "    ({0:F2},{1:F2})->({2:F2},{3:F2}) w={4:F2} color=0x{5:X6} dash={6}",
+                    e.X1, e.Y1, e.X2, e.Y2, e.Weight, e.ColorRgb & 0xFFFFFF, e.DashStyle));
+            }
+
+            return sb.ToString();
         }
 
         private static void DumpFrame(StringBuilder sb, TextModel t)
@@ -77,7 +53,7 @@ namespace TableToShapes.Interop
             if (t == null) return;
             int paragraphs = t.HasText ? t.Paragraphs.Count : 0;
             sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                "    frame: vAnchor={0} wrap={1} margins(L{2:F1} R{3:F1} T{4:F1} B{5:F1}) paragraphs={6}",
+                "      frame: vAnchor={0} wrap={1} margins(L{2:F1} R{3:F1} T{4:F1} B{5:F1}) paragraphs={6}",
                 t.VerticalAnchor, t.WordWrap, t.MarginLeft, t.MarginRight, t.MarginTop, t.MarginBottom, paragraphs));
         }
 
@@ -91,7 +67,7 @@ namespace TableToShapes.Interop
                 {
                     var run = para.Runs[i];
                     sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                        "      run[p{0}.{1}] \"{2}\" font=\"{3}\" cs=\"{4}\" fe=\"{5}\" sz={6:F1} " +
+                        "        run[p{0}.{1}] \"{2}\" font=\"{3}\" cs=\"{4}\" fe=\"{5}\" sz={6:F1} " +
                         "B={7} I={8} U={9} strike={10} color=0x{11:X6} highlight={12}",
                         p, i, run.Text, run.FontName, run.FontNameComplexScript, run.FontNameFarEast,
                         run.FontSize, run.Bold ? 1 : 0, run.Italic ? 1 : 0, run.UnderlineStyle,

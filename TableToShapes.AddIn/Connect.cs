@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using TableToShapes.Core.Logging;
 using TableToShapes.Interop;
 using Office = Microsoft.Office.Core;
 using PowerPoint = Microsoft.Office.Interop.PowerPoint;
@@ -23,17 +24,18 @@ namespace TableToShapes.AddIn
     {
         private PowerPoint.Application _app;
 
-        private static readonly string LogPath =
-            System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TableToShapes.AddIn.log");
+        // Composition root: build the single logger the pipeline uses. The minimum level comes
+        // from the TABLETOSHAPES_LOGLEVEL environment variable (Debug/Info/Warning/Error/None),
+        // defaulting to Info. Everything is written to %TEMP%\TableToShapes.log, which
+        // self-rotates so it never grows without bound.
+        private static readonly ILogger Log = CreateLogger();
 
-        private static void Log(string message)
+        private static ILogger CreateLogger()
         {
-            try
-            {
-                System.IO.File.AppendAllText(LogPath,
-                    $"{DateTime.Now:HH:mm:ss.fff} {message}{Environment.NewLine}");
-            }
-            catch { /* logging must never take the add-in down */ }
+            var level = LogLevelParser.Parse(
+                Environment.GetEnvironmentVariable("TABLETOSHAPES_LOGLEVEL"), LogLevel.Info);
+            var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "TableToShapes.log");
+            return new FileLogger(path, level);
         }
 
         // ---- IDTExtensibility2 ----
@@ -43,13 +45,12 @@ namespace TableToShapes.AddIn
         {
             try
             {
-                Log($"OnConnection: mode={connectMode}");
+                Log.Info($"OnConnection: mode={connectMode}");
                 _app = (PowerPoint.Application)application;
-                Log("OnConnection: OK");
             }
             catch (Exception ex)
             {
-                Log("OnConnection FAILED: " + ex);
+                Log.Error("OnConnection failed.", ex);
                 throw;
             }
         }
@@ -67,7 +68,7 @@ namespace TableToShapes.AddIn
 
         public string GetCustomUI(string ribbonID)
         {
-            Log($"GetCustomUI: ribbonID={ribbonID}");
+            Log.Debug($"GetCustomUI: ribbonID={ribbonID}");
             return @"
 <customUI xmlns='http://schemas.microsoft.com/office/2009/07/customui'>
   <ribbon>
@@ -94,22 +95,21 @@ namespace TableToShapes.AddIn
         {
             try
             {
-                Log("OnConvertClicked: fired");
+                Log.Debug("Convert clicked.");
                 var shape = GetSelectedShape();
                 if (shape == null || shape.HasTable != Office.MsoTriState.msoTrue)
                 {
-                    Log("OnConvertClicked: no table selected");
+                    Log.Info("Convert clicked with no table selected.");
                     MessageBox.Show("Please select a table first.", "Table to Shapes",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
 
-                new TableConverter().Convert(shape);
-                Log("OnConvertClicked: converted OK");
+                new TableConverter(Log).Convert(shape);
             }
             catch (Exception ex)
             {
-                Log("OnConvertClicked FAILED: " + ex);
+                Log.Error("Conversion failed.", ex);
                 MessageBox.Show("Conversion failed: " + ex.Message, "Table to Shapes",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }

@@ -104,11 +104,27 @@ Bitness note: the script writes to `HKCU\Software\Classes`; it has been used wit
 32-bit Office on 64-bit Windows may resolve the class under `Wow6432Node`, which the script does
 not currently write - adjust the registry path if you run 32-bit Office.
 
-### Troubleshooting
+### Logging & troubleshooting
 
-Set the `TABLETOSHAPES_DIAGNOSTICS` environment variable before launching PowerPoint to have
-each conversion append a human-readable snapshot (parsed cells, borders, runs and resolved
-edges) to `%TEMP%\TableToShapes.Diagnostics.log`. It is off by default.
+The add-in and the conversion pipeline share one structured logger (an injected `ILogger`;
+production uses a file sink). All output goes to **`%TEMP%\TableToShapes.log`**, which
+self-rotates past ~512 KB so it never grows without bound.
+
+The minimum level is read from the `TABLETOSHAPES_LOGLEVEL` environment variable - one of
+`Debug`, `Info`, `Warning`, `Error`, `None` - defaulting to `Info`. Set it before launching
+PowerPoint. (It is an environment variable rather than an app.config setting because a COM
+add-in loads inside PowerPoint, whose config it does not control.)
+
+- **Info** (default) - add-in lifecycle plus one line per conversion (table size, cell and
+  border-segment counts, success/failure).
+- **Warning / Error** - non-fatal issues (a property a given Office build could not read and had
+  to skip) and failures, with full exception detail.
+- **Debug** - additionally logs a full per-conversion snapshot (parsed cells, borders, runs and
+  resolved edges); use this to reconcile a fidelity difference against what the reader captured.
+
+The abstraction lives in `TableToShapes.Core.Logging` (`ILogger`, `LogLevel`, `FileLogger`,
+`NullLogger`, `LogLevelParser`); components accept an `ILogger` and default to `NullLogger` in
+tests.
 
 ## AI workflow used
 

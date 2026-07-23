@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
+using TableToShapes.Core.Logging;
 using TableToShapes.Core.Model;
 using PowerPoint = Microsoft.Office.Interop.PowerPoint;
 using Office = Microsoft.Office.Core;
@@ -14,6 +16,15 @@ namespace TableToShapes.Interop
     /// </summary>
     public sealed class TableReader
     {
+        private readonly ILogger _log;
+
+        public TableReader() : this(NullLogger.Instance) { }
+
+        public TableReader(ILogger logger)
+        {
+            _log = logger ?? NullLogger.Instance;
+        }
+
         public TableModel Read(PowerPoint.Shape tableShape)
         {
             var table = tableShape.Table;
@@ -111,7 +122,7 @@ namespace TableToShapes.Interop
             return sizes;
         }
 
-        private static CellModel ReadCell(PowerPoint.Cell cell, PowerPoint.Shape shape, Dictionary<string, int> mergeIds)
+        private CellModel ReadCell(PowerPoint.Cell cell, PowerPoint.Shape shape, Dictionary<string, int> mergeIds)
         {
             // Culture-invariant, and rounded the same way as the edge sets so the key and the
             // geometry stay consistent regardless of the machine's decimal separator.
@@ -161,7 +172,7 @@ namespace TableToShapes.Interop
             };
         }
 
-        private static TextModel ReadText(PowerPoint.TextFrame2 frame)
+        private TextModel ReadText(PowerPoint.TextFrame2 frame)
         {
             var text = new TextModel
             {
@@ -209,7 +220,7 @@ namespace TableToShapes.Interop
             return text;
         }
 
-        private static RunModel ReadRun(Office.TextRange2 run)
+        private RunModel ReadRun(Office.TextRange2 run)
         {
             var font = run.Font;
             var model = new RunModel
@@ -219,13 +230,13 @@ namespace TableToShapes.Interop
                 // Copy the script-specific faces too: PowerPoint renders each character with
                 // the face that matches its script, so a run can display a substituted font
                 // if only Name is reproduced. Guarded because some builds throw on these.
-                FontNameComplexScript = TryGet(() => font.NameComplexScript),
-                FontNameFarEast = TryGet(() => font.NameFarEast),
+                FontNameComplexScript = TryGet("NameComplexScript", () => font.NameComplexScript),
+                FontNameFarEast = TryGet("NameFarEast", () => font.NameFarEast),
                 FontSize = font.Size,
                 Bold = font.Bold == Office.MsoTriState.msoTrue,
                 Italic = font.Italic == Office.MsoTriState.msoTrue,
                 UnderlineStyle = (int)font.UnderlineStyle,
-                Strike = TryGetInt(() => (int)font.Strike),
+                Strike = TryGetInt("Strike", () => (int)font.Strike),
                 ColorRgb = font.Fill.ForeColor.RGB
             };
 
@@ -241,21 +252,27 @@ namespace TableToShapes.Interop
                     model.HighlightColorRgb = highlight.RGB;
                 }
             }
-            catch { /* highlight unsupported on this build */ }
+            catch (Exception ex)
+            {
+                // Highlight unsupported on this build; record the dropped formatting.
+                _log.Warning("Highlight read failed; leaving text unhighlighted.", ex);
+            }
 
             return model;
         }
 
-        private static string TryGet(System.Func<string> get)
+        // Reads an optional property, returning a default if the COM call throws. The failure is
+        // logged (at Warning) so silently-dropped formatting is traceable.
+        private string TryGet(string what, Func<string> get)
         {
             try { return get(); }
-            catch { return null; }
+            catch (Exception ex) { _log.Warning(what + " read failed; skipping it.", ex); return null; }
         }
 
-        private static int TryGetInt(System.Func<int> get)
+        private int TryGetInt(string what, Func<int> get)
         {
             try { return get(); }
-            catch { return 0; }
+            catch (Exception ex) { _log.Warning(what + " read failed; skipping it.", ex); return 0; }
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using TableToShapes.Core.Layout;
+using TableToShapes.Core.Logging;
 using PowerPoint = Microsoft.Office.Interop.PowerPoint;
 
 namespace TableToShapes.Interop
@@ -11,9 +12,18 @@ namespace TableToShapes.Interop
     /// </summary>
     public sealed class TableConverter
     {
-        private readonly TableReader _reader = new TableReader();
+        private readonly TableReader _reader;
         private readonly LayoutEngine _layoutEngine = new LayoutEngine();
         private readonly ShapeWriter _writer = new ShapeWriter();
+        private readonly ILogger _log;
+
+        public TableConverter() : this(NullLogger.Instance) { }
+
+        public TableConverter(ILogger logger)
+        {
+            _log = logger ?? NullLogger.Instance;
+            _reader = new TableReader(_log);
+        }
 
         /// <exception cref="InvalidOperationException">The shape is not a table.</exception>
         public PowerPoint.Shape Convert(PowerPoint.Shape tableShape)
@@ -26,9 +36,11 @@ namespace TableToShapes.Interop
             var model = _reader.Read(tableShape);
             var layout = _layoutEngine.Calculate(model);
 
-            // Opt-in troubleshooting output (off unless TABLETOSHAPES_DIAGNOSTICS is set).
-            if (ConversionDiagnostics.Enabled)
-                ConversionDiagnostics.Dump(model, layout);
+            _log.Info(string.Format("Converting {0}x{1} table ({2} cells, {3} border segments).",
+                model.RowCount, model.ColumnCount, layout.Cells.Count, layout.Edges.Count));
+            // Only build the (expensive) snapshot string when Debug logging is actually on.
+            if (_log.IsEnabled(LogLevel.Debug))
+                _log.Debug(ConversionDiagnostics.Describe(model, layout));
 
             // The generated shapes sit in absolute slide coordinates taken from the actual cell
             // rectangles, so the replacement's origin is the model's own top-left (which can
@@ -50,16 +62,26 @@ namespace TableToShapes.Interop
                 result.Left = left;
                 result.Top = top;
             }
-            catch
+            catch (Exception ex)
             {
-                // Nothing has been deleted yet, so leave the slide exactly as we found it:
-                // remove the partial/grouped output. The original table is still intact.
-                if (result != null) result.Delete();               // group (with its children) or single shape
-                else RemoveByNamePrefix(slide, ShapeWriter.CreatedShapePrefix);
+                _log.Error("Conversion failed; rolling back the partial output.", ex);
+                // Nothing has been deleted yet, so leave the slide exactly as we found it by
+                // removing the partial/grouped output. Cleanup is itself guarded so a failure
+                // here cannot mask the original exception (which is rethrown below).
+                try
+                {
+                    if (result != null) result.Delete();           // group (with its children) or single shape
+                    else RemoveByNamePrefix(slide, ShapeWriter.CreatedShapePrefix);
+                }
+                catch (Exception cleanupEx)
+                {
+                    _log.Warning("Cleanup after a failed conversion did not complete.", cleanupEx);
+                }
                 throw;
             }
 
             tableShape.Delete();
+            _log.Info("Conversion succeeded.");
             return result;
         }
 
