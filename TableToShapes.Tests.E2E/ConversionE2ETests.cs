@@ -113,9 +113,9 @@ namespace TableToShapes.Tests.E2E
             }
         }
 
-        // Mirrors the manual "Test pics" table so the pixel-diff guards every failure mode we
-        // fixed: multiple runs in one cell, a highlighted run, a coloured run, a 2x2 merge, and
-        // a cell with its borders switched off.
+        // Builds a table that exercises the fidelity-sensitive features together, so the
+        // pixel-diff guards them all: multiple runs in one cell, a highlighted run, a coloured
+        // run, a 2x2 merge, and a cell with its borders switched off.
         private static PowerPoint.Shape BuildStyledTable(PowerPoint.Slide slide)
         {
             const int Red = 0x000000FF;    // RGB(255,0,0) in BGR
@@ -149,9 +149,10 @@ namespace TableToShapes.Tests.E2E
             merged.Text = "This is MERGED";
             merged.Characters[9, 6].Font.Fill.ForeColor.RGB = Red; // "MERGED"
 
-            // "No border cell" - all four borders turned off.
+            // "No border cell" over two paragraphs - all four borders turned off. The second
+            // paragraph guards multi-line / auto-grown-row fidelity.
             var noBorder = table.Cell(3, 1);
-            noBorder.Shape.TextFrame2.TextRange.Text = "No border cell";
+            noBorder.Shape.TextFrame2.TextRange.Text = "No border cell\rsecond line";
             foreach (PowerPoint.PpBorderType side in new[]
             {
                 PowerPoint.PpBorderType.ppBorderTop, PowerPoint.PpBorderType.ppBorderBottom,

@@ -110,7 +110,7 @@ namespace TableToShapes.Interop
             return new FillModel
             {
                 Visible = visible,
-                // ForeColor.RGB resolves theme colours to literal RGB � exactly what we
+                // ForeColor.RGB resolves theme colours to literal RGB -- exactly what we
                 // want for pixel fidelity (at the cost of losing theme re-colouring).
                 ColorRgb = visible ? fill.ForeColor.RGB : 0,
                 Transparency = visible ? fill.Transparency : 0f

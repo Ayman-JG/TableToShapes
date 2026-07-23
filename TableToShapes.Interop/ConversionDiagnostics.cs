@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -8,12 +9,23 @@ using TableToShapes.Core.Model;
 namespace TableToShapes.Interop
 {
     /// <summary>
-    /// Writes a human-readable snapshot of what the reader saw and what the layout emitted.
-    /// Used to diagnose fidelity issues (e.g. a border drawn where the source shows none)
-    /// without a debugger attached to PowerPoint. Best-effort: never throws.
+    /// Optional troubleshooting aid: writes a human-readable snapshot of the parsed
+    /// <see cref="TableModel"/> and the resolved border segments to a log file. Because the
+    /// conversion runs against live COM objects (no debugger-friendly surface), this makes it
+    /// possible to see exactly what the reader captured and what the layout emitted.
+    ///
+    /// Disabled by default. Enable by setting the <c>TABLETOSHAPES_DIAGNOSTICS</c> environment
+    /// variable (to any non-empty value) before running PowerPoint; output goes to
+    /// <see cref="DefaultPath"/>. All methods are best-effort and never throw.
     /// </summary>
     public static class ConversionDiagnostics
     {
+        private const string EnableVariable = "TABLETOSHAPES_DIAGNOSTICS";
+
+        /// <summary>True when the <c>TABLETOSHAPES_DIAGNOSTICS</c> environment variable is set.</summary>
+        public static bool Enabled =>
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(EnableVariable));
+
         public static string DefaultPath =>
             Path.Combine(Path.GetTempPath(), "TableToShapes.Diagnostics.log");
 
@@ -47,7 +59,7 @@ namespace TableToShapes.Interop
                 }
 
                 sb.AppendLine();
-                sb.AppendLine("--- emitted edges (" + layout.Edges.Count + ") ---");
+                sb.AppendLine("--- resolved edges (" + layout.Edges.Count + ") ---");
                 foreach (var e in layout.Edges)
                 {
                     sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
@@ -57,21 +69,7 @@ namespace TableToShapes.Interop
 
                 File.AppendAllText(path, sb.ToString() + Environment.NewLine);
             }
-            catch { /* diagnostics must never break conversion */ }
-        }
-
-        private static string Fmt(BorderModel b)
-        {
-            if (b == null) return "null";
-            return b.Visible
-                ? string.Format(CultureInfo.InvariantCulture, "ON w={0:F2} 0x{1:X6}", b.Weight, b.ColorRgb & 0xFFFFFF)
-                : "off";
-        }
-
-        private static string Fmt(FillModel f)
-        {
-            if (f == null) return "null";
-            return f.Visible ? string.Format(CultureInfo.InvariantCulture, "0x{0:X6}", f.ColorRgb & 0xFFFFFF) : "none";
+            catch { /* diagnostics must never affect a conversion */ }
         }
 
         private static void DumpFrame(StringBuilder sb, TextModel t)
@@ -103,6 +101,20 @@ namespace TableToShapes.Interop
             }
         }
 
+        private static string Fmt(BorderModel b)
+        {
+            if (b == null) return "null";
+            return b.Visible
+                ? string.Format(CultureInfo.InvariantCulture, "ON w={0:F2} 0x{1:X6}", b.Weight, b.ColorRgb & 0xFFFFFF)
+                : "off";
+        }
+
+        private static string Fmt(FillModel f)
+        {
+            if (f == null) return "null";
+            return f.Visible ? string.Format(CultureInfo.InvariantCulture, "0x{0:X6}", f.ColorRgb & 0xFFFFFF) : "none";
+        }
+
         private static string FirstLine(TextModel t)
         {
             if (t == null || !t.HasText || t.Paragraphs.Count == 0) return "";
@@ -112,7 +124,7 @@ namespace TableToShapes.Interop
             return s.Length > 30 ? s.Substring(0, 30) : s;
         }
 
-        private static string Join(System.Collections.Generic.IReadOnlyList<float> values)
+        private static string Join(IReadOnlyList<float> values)
         {
             if (values == null) return "";
             var sb = new StringBuilder();

@@ -67,8 +67,8 @@ namespace TableToShapes.Tests.Unit
 
     /// <summary>
     /// Border resolution. One test (or small group) per rule R1-R6 from
-    /// <see cref="LayoutEngine"/> / docs/FIDELITY_RULES.md, plus regressions taken from the two
-    /// real decks that drove the design.
+    /// <see cref="LayoutEngine"/> / docs/FIDELITY_RULES.md, plus a couple of end-to-end
+    /// combinations of merges, artifacts and borderless cells.
     /// </summary>
     [TestFixture]
     public class LayoutEngineBorderTests
@@ -164,8 +164,8 @@ namespace TableToShapes.Tests.Unit
         [Test]
         public void R3_GivenMergedArtifactBorder_WhenPlainNeighbourIsOff_ThenNoLine()
         {
-            // The test-1 phantom: a vertically merged right column with a stray black left
-            // border, beside a fully borderless bottom-left cell.
+            // A vertically merged right column reports a stray black left border, beside a fully
+            // borderless bottom-left cell. The plain "off" wins, so no divider is drawn.
             var table = TableModelBuilder.Grid(2, 2, rowHeight: 20f, colWidth: 100f);
             MergeRightColumn(table);
             table.Cells[0, 1].BorderLeft = TableModelBuilder.VisibleBorder(color: Black); // artifact
@@ -240,10 +240,10 @@ namespace TableToShapes.Tests.Unit
             layout.Edges.Single(e => e.X1 == 100f && e.X2 == 100f).ColorRgb.Should().Be(Red);
         }
 
-        // ---- regression: the test-2 deck (merged bottom vs mixed plain tops) ----
+        // ---- combination: merged bottom border beside mixed plain top borders ----
 
         [Test]
-        public void Regression_MergedBottomBesideMixedPlainTops_ResolvesEachSegmentIndependently()
+        public void GivenMergedBottomBesideMixedPlainTops_WhenCalculating_ThenEachSegmentResolvesIndependently()
         {
             // Top row is a 2-column merged cell with a black (artifact) bottom border. Below it,
             // one plain cell has a white top ("no border cell") and the other a black top

@@ -26,8 +26,9 @@ namespace TableToShapes.Interop
             var model = _reader.Read(tableShape);
             var layout = _layoutEngine.Calculate(model);
 
-            // Best-effort snapshot of what we read/emitted (temp file); never throws.
-            ConversionDiagnostics.Dump(model, layout);
+            // Opt-in troubleshooting output (off unless TABLETOSHAPES_DIAGNOSTICS is set).
+            if (ConversionDiagnostics.Enabled)
+                ConversionDiagnostics.Dump(model, layout);
 
             float left = tableShape.Left, top = tableShape.Top;
 
