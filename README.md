@@ -8,6 +8,14 @@ For a plain-language summary of what is and isn't supported (suitable for non-en
 see [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md). For the engineering detail of the border
 rules, see [`docs/FIDELITY_RULES.md`](docs/FIDELITY_RULES.md).
 
+## Scope and status
+
+This was built as an **MVP within an ~8-hour timebox**. The aim was a faithful, well-tested
+conversion of the table features that come up most often, with the architecture and the known
+gaps clearly documented rather than hidden. It handles the common cases end to end; some edge
+cases and fine-tuning (listed in [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md) and *Known
+limitations* below) would need further work to fully meet production and customer expectations.
+
 ## Solution layout
 
 | Project | Purpose |
@@ -77,12 +85,21 @@ dotnet test TableToShapes.Tests.E2E      # requires PowerPoint installed, in a U
 ```powershell
 dotnet build
 cd TableToShapes.AddIn
-.\install-addin.ps1      # RegAsm + HKCU PowerPoint\Addins entry (current user, no admin)
+.\install-addin.ps1      # writes the COM + PowerPoint add-in registry entries (current user)
 ```
 
+`install-addin.ps1` registers the class **directly in the per-user COM hive**
+(`HKCU\Software\Classes`, loaded via the `mscoree.dll` .NET shim) and adds the
+`PowerPoint\Addins` entry - it does **not** use RegAsm, so no administrator rights are needed.
+It reads the `bin\Debug\net48` build, so build first (a Release build needs the path in the
+script adjusted).
+
 Restart PowerPoint, select a table, and click **Convert Table** in the **Table to Shapes**
-group on the Home tab. Remove with `.\uninstall-addin.ps1`. Note: 32-bit Office needs the
-32-bit RegAsm - change `Framework64` to `Framework` in the scripts.
+group on the Home tab. Remove with `.\uninstall-addin.ps1`.
+
+Bitness note: the script writes to `HKCU\Software\Classes`; it has been used with 64-bit Office.
+32-bit Office on 64-bit Windows may resolve the class under `Wow6432Node`, which the script does
+not currently write - adjust the registry path if you run 32-bit Office.
 
 ### Troubleshooting
 
