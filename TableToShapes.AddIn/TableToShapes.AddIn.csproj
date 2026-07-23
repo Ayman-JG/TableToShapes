@@ -11,8 +11,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Office.Interop.PowerPoint" Version="15.0.4420.1018" />
-    <PackageReference Include="MicrosoftOfficeCore" Version="15.0.0" />
+    <!-- Embed the interop types (NoPIA) so only the three TableToShapes.*.dll need to ship. -->
+    <PackageReference Include="Microsoft.Office.Interop.PowerPoint" Version="15.0.4420.1018">
+      <EmbedInteropTypes>true</EmbedInteropTypes>
+    </PackageReference>
+    <PackageReference Include="MicrosoftOfficeCore" Version="15.0.0">
+      <EmbedInteropTypes>true</EmbedInteropTypes>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>

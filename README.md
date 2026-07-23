@@ -6,7 +6,8 @@ replaces it with a single grouped shape.
 
 For a plain-language summary of what is and isn't supported (suitable for non-engineers),
 see [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md). For the engineering detail of the border
-rules, see [`docs/FIDELITY_RULES.md`](docs/FIDELITY_RULES.md).
+rules, see [`docs/FIDELITY_RULES.md`](docs/FIDELITY_RULES.md). For packaging and rollout to
+client machines (WiX MSI), see [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
 ## Scope and status
 
@@ -23,7 +24,7 @@ limitations* below) would need further work to fully meet production and custome
 | `TableToShapes.Core` | **Pure, COM-free logic**: the table snapshot model (`TableModel`), geometry and border resolution (`LayoutEngine`), merged-cell span detection, and the resolved `CellPlacement` / `EdgePlacement` outputs. Fully unit-testable without Office. |
 | `TableToShapes.Interop` | Thin Interop layer: `TableReader` (live table -> model), `ShapeWriter` (layout -> shapes), `TableConverter` (orchestration: read -> layout -> write -> delete -> group), and an opt-in `ConversionDiagnostics` log. |
 | `TableToShapes.AddIn` | COM add-in (`Connect.cs` implements `IDTExtensibility2` + `IRibbonExtensibility`): adds a "Convert Table" button to the Home tab. Registered per-user via `install-addin.ps1` - no VSTO runtime or special Visual Studio workload required. |
-| `TableToShapes.Tests.Unit` | NUnit + FluentAssertions. Covers geometry, merges, and the border-resolution rules. Runs anywhere (no Office). |
+| `TableToShapes.Tests.Unit` | NUnit + FluentAssertions. Covers geometry/merges, the border-resolution rules, the logger, and the add-in's ribbon/registration surface. No Office installation required. |
 | `TableToShapes.Tests.E2E` | Drives a **real PowerPoint** instance: builds styled/merged tables, converts them, and asserts the renders are pixel-identical via `slide.Export` + `ImageComparer`. Tagged `[Category("E2E")]`; requires PowerPoint installed. |
 
 ## How fidelity is achieved
@@ -85,6 +86,10 @@ dotnet test TableToShapes.Tests.E2E      # requires PowerPoint installed, in a U
 
 ### Installing the add-in
 
+For development, `install-addin.ps1` registers the add-in for the **current user** (no admin).
+For deploying to client machines, use the **per-machine WiX MSI** instead - see
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
 ```powershell
 dotnet build
 cd TableToShapes.AddIn
@@ -103,6 +108,38 @@ group on the Home tab. Remove with `.\uninstall-addin.ps1`.
 Bitness note: the script writes to `HKCU\Software\Classes`; it has been used with 64-bit Office.
 32-bit Office on 64-bit Windows may resolve the class under `Wow6432Node`, which the script does
 not currently write - adjust the registry path if you run 32-bit Office.
+
+### Signing (dev/test)
+
+Windows/Office may block an unsigned add-in depending on trust settings. For local testing,
+`sign-dev.ps1` creates a self-signed code-signing certificate and signs the three assemblies:
+
+```powershell
+dotnet build
+cd TableToShapes.AddIn
+.\sign-dev.ps1 -Trust     # -Trust imports the cert into the machine trust stores (needs admin)
+.\install-addin.ps1
+```
+
+This is **development only** - a self-signed certificate is trusted only where you import it.
+Distributing to clients needs a real code-signing certificate (internal PKI, a public-CA
+hardware token, or a cloud signing service) applied to the assemblies and the installer.
+
+### Testing the add-in
+
+The add-in's automatable surface - the ribbon definition and the COM registration attributes -
+is covered by unit tests (`AddInTests`), which also assert the `Guid`/`ProgId` match this install
+script and that the ribbon `onAction` resolves to a real method. The COM-activation and UI paths
+are inherently integration; verify them manually:
+
+1. `dotnet build` and run `install-addin.ps1`, then restart PowerPoint.
+2. Confirm the **Table to Shapes** group and **Convert Table** button appear on the Home tab.
+3. Select a table and click **Convert Table**; the table should become an identical shape group.
+4. Click it with no table (or a non-table shape) selected; expect the "Please select a table"
+   prompt and no change.
+5. Check `%TEMP%\TableToShapes.log` for the lifecycle/conversion entries (set
+   `TABLETOSHAPES_LOGLEVEL=Debug` first for the full snapshot).
+6. Run `uninstall-addin.ps1`; the group and button should be gone after a restart.
 
 ### Logging & troubleshooting
 

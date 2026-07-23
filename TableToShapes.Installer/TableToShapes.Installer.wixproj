@@ -1,0 +1,15 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <PropertyGroup>
+    <OutputName>TableToShapes</OutputName>
+    <OutputType>Package</OutputType>
+    <!-- Match the add-in build configuration; defaults to Release for shipping. -->
+    <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Where the built add-in assemblies live. Passed to the .wxs as $(var.AddInBin). -->
+    <DefineConstants>AddInBin=$(MSBuildThisFileDirectory)..\TableToShapes.AddIn\bin\$(Configuration)\net48</DefineConstants>
+  </PropertyGroup>
+
+</Project>

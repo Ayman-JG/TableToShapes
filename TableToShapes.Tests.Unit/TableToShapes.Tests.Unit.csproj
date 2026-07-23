@@ -15,6 +15,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TableToShapes.Core\TableToShapes.Core.csproj" />
+    <!-- For the add-in surface tests (ribbon XML + COM attributes). Pulls the Office PIA
+         reference assemblies via NuGet; no Office installation is needed to run these. -->
+    <ProjectReference Include="..\TableToShapes.AddIn\TableToShapes.AddIn.csproj" />
   </ItemGroup>
 
 </Project>

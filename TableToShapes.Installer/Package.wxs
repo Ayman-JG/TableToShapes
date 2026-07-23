@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Per-machine MSI for the Table to Shapes PowerPoint add-in.
+
+  Installs the assemblies to Program Files and writes the same registry entries as
+  install-addin.ps1, but under HKLM (all users) instead of HKCU:
+    - the managed COM class (mscoree shim) and ProgId,
+    - the PowerPoint Addins entry with LoadBehavior = 3.
+
+  Set Manufacturer below before shipping. Keep UpgradeCode stable across versions.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+
+  <Package Name="Table to Shapes PowerPoint Add-in"
+           Manufacturer="Your Company"
+           Version="1.0.0.0"
+           UpgradeCode="9F4B2C1A-8D6E-4F3A-B5C7-2E1D0A9B8C7D"
+           Scope="perMachine"
+           Compressed="yes"
+           InstallerVersion="500">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="TableToShapes" />
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="Table to Shapes Add-in" Level="1">
+      <ComponentGroupRef Id="AddInFiles" />
+      <ComponentRef Id="ComClass" />
+      <ComponentRef Id="ComProgId" />
+      <ComponentRef Id="OfficeAddin" />
+    </Feature>
+
+    <!-- 1. Assemblies. Interop types are embedded (see DEPLOYMENT.md), so only these three DLLs
+            are needed. If a non-embeddable interop assembly (e.g. Extensibility.dll) still lands
+            in bin, add a <File> component for it here. -->
+    <ComponentGroup Id="AddInFiles" Directory="INSTALLFOLDER">
+      <Component>
+        <File Id="AddInDll" Source="$(var.AddInBin)\TableToShapes.AddIn.dll" />
+      </Component>
+      <Component>
+        <File Source="$(var.AddInBin)\TableToShapes.Interop.dll" />
+      </Component>
+      <Component>
+        <File Source="$(var.AddInBin)\TableToShapes.Core.dll" />
+      </Component>
+    </ComponentGroup>
+
+    <!-- 2. Managed COM class registration (mscoree shim). -->
+    <Component Id="ComClass" Directory="INSTALLFOLDER">
+      <RegistryKey Root="HKLM" Key="Software\Classes\CLSID\{6F9B0C64-3C1A-4E6E-9B7D-2D3E8A11F0AB}">
+        <RegistryValue Type="string" Value="TableToShapes.AddIn.Connect" KeyPath="yes" />
+        <RegistryKey Key="InprocServer32">
+          <RegistryValue Type="string" Value="mscoree.dll" />
+          <RegistryValue Name="ThreadingModel" Type="string" Value="Both" />
+          <RegistryValue Name="Class" Type="string" Value="TableToShapes.AddIn.Connect" />
+          <RegistryValue Name="Assembly" Type="string" Value="TableToShapes.AddIn, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
+          <RegistryValue Name="RuntimeVersion" Type="string" Value="v4.0.30319" />
+          <!-- Points fusion at the installed DLL (the assembly is not in the GAC). -->
+          <RegistryValue Name="CodeBase" Type="string" Value="file:///[#AddInDll]" />
+        </RegistryKey>
+        <RegistryKey Key="ProgId">
+          <RegistryValue Type="string" Value="TableToShapes.AddIn.Connect" />
+        </RegistryKey>
+      </RegistryKey>
+    </Component>
+
+    <!-- 3. ProgId -> CLSID lookup (PowerPoint resolves the add-in by ProgId). -->
+    <Component Id="ComProgId" Directory="INSTALLFOLDER">
+      <RegistryKey Root="HKLM" Key="Software\Classes\TableToShapes.AddIn.Connect">
+        <RegistryValue Type="string" Value="TableToShapes.AddIn.Connect" KeyPath="yes" />
+        <RegistryKey Key="CLSID">
+          <RegistryValue Type="string" Value="{6F9B0C64-3C1A-4E6E-9B7D-2D3E8A11F0AB}" />
+        </RegistryKey>
+      </RegistryKey>
+    </Component>
+
+    <!-- 4. Tell PowerPoint to load the add-in (LoadBehavior 3 = load at startup). -->
+    <Component Id="OfficeAddin" Directory="INSTALLFOLDER">
+      <RegistryKey Root="HKLM" Key="Software\Microsoft\Office\PowerPoint\Addins\TableToShapes.AddIn.Connect">
+        <RegistryValue Name="FriendlyName" Type="string" Value="Table to Shapes" KeyPath="yes" />
+        <RegistryValue Name="Description" Type="string" Value="Converts a selected table into a visually identical group of shapes." />
+        <RegistryValue Name="LoadBehavior" Type="integer" Value="3" />
+      </RegistryKey>
+    </Component>
+
+  </Package>
+</Wix>
