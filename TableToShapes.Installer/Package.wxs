@@ -32,14 +32,11 @@
       <ComponentRef Id="OfficeAddin" />
     </Feature>
 
-    <!-- 1. Assemblies. The main add-in DLL is listed explicitly so the COM CodeBase below can
-            reference it by id; every other runtime *.dll in the build output (our libraries plus
-            the Office interop assemblies) is harvested automatically. .pdb files are not shipped. -->
+    <!-- 1. Assemblies. Harvest every runtime *.dll from the build output (our three libraries
+            plus the Office interop assemblies the build copies alongside them). .pdb files are
+            not shipped. The COM CodeBase below points at the installed add-in DLL by path. -->
     <ComponentGroup Id="AddInFiles" Directory="INSTALLFOLDER">
-      <Component>
-        <File Id="AddInDll" Source="$(var.AddInBin)\TableToShapes.AddIn.dll" />
-      </Component>
-      <Files Include="$(var.AddInBin)\*.dll" Exclude="$(var.AddInBin)\TableToShapes.AddIn.dll" />
+      <Files Include="$(var.AddInBin)\*.dll" />
     </ComponentGroup>
 
     <!-- 2. Managed COM class registration (mscoree shim). -->
@@ -52,8 +49,9 @@
           <RegistryValue Name="Class" Type="string" Value="TableToShapes.AddIn.Connect" />
           <RegistryValue Name="Assembly" Type="string" Value="TableToShapes.AddIn, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
           <RegistryValue Name="RuntimeVersion" Type="string" Value="v4.0.30319" />
-          <!-- Points fusion at the installed DLL (the assembly is not in the GAC). -->
-          <RegistryValue Name="CodeBase" Type="string" Value="file:///[#AddInDll]" />
+          <!-- Points fusion at the installed DLL (the assembly is not in the GAC).
+               [INSTALLFOLDER] resolves to the install path with a trailing backslash. -->
+          <RegistryValue Name="CodeBase" Type="string" Value="file:///[INSTALLFOLDER]TableToShapes.AddIn.dll" />
         </RegistryKey>
         <RegistryKey Key="ProgId">
           <RegistryValue Type="string" Value="TableToShapes.AddIn.Connect" />
