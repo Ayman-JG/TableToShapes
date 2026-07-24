@@ -104,11 +104,10 @@ Legend: **[H]** handled - **[P]** partial - **[M]** not yet.
 
 ### 2.1 Geometry & merges
 - Table origin from the minimum cell edge. **[H]**
-- Column widths / row heights reconstructed from actual cell rectangles, falling back to declared
-  track sizes if an interior boundary is hidden by a merge. **[P]** - auto-grown (multi-line) rows
-  are a known risk: if Interop under-reports a cell's `Height`, a row can collapse to its declared
-  minimum. This should be confirmed from a real multi-line table before changing the
-  reconstruction.
+- Column widths / row heights reconstructed from the actual laid-out cell rectangles, falling back
+  to declared track sizes only if an interior boundary is hidden by a merge. Auto-grown
+  (multi-line) rows are handled - their real height comes from the cell rectangles - and are
+  guarded by a multi-paragraph cell in the E2E fixture. **[H]**
 - Merge detection via a geometry hash of `Shape.Left/Top/Width/Height` (all covered cells report
   identical geometry; `Shape.Id` is `E_NOTIMPL` for table cells). Works but is sensitive to
   rounding. **[P]** - a span-based detection with the geometry hash as fallback would be sturdier.
@@ -128,7 +127,9 @@ Legend: **[H]** handled - **[P]** partial - **[M]** not yet.
 
 ### 2.5 Paragraphs
 - Alignment, space before/after/within, indent level. **[H]**
-- Bullets / numbering (list format, glyph, start-at, colour, size). **[M]** - visible and common.
+- Bullets / numbering: type (unnumbered / numbered), glyph character, numbering style + start
+  value, relative size, bullet font, and bullet colour. **[H]** - a custom hanging-indent ruler
+  falls back to the level default (see gaps).
 - Line-spacing rule (multiple vs exact points): `SpaceWithin` is copied but the rule type is not
   distinguished. **[P]**
 - Right-to-left paragraphs. **[M]**
@@ -152,13 +153,13 @@ Legend: **[H]** handled - **[P]** partial - **[M]** not yet.
 
 ## 3. Prioritised gaps
 
-1. **Bullets / numbering** in paragraphs (common, currently not reproduced).
-2. **Merge detection** hardening (span-based, with the geometry hash as fallback).
-3. **Auto-grown row heights** for multi-line cells (confirm the `Height` behaviour first).
-4. **Underline colour, sub/superscript, caps, character spacing.**
-5. **Hyperlinks.**
-6. **Gradient / pattern / picture fills** (approximate faithfully and flag).
-7. **Text rotation / RTL / text effects.**
+1. **Merge detection** hardening (span-based, with the geometry hash as fallback).
+2. **Underline colour, sub/superscript, caps, character spacing.**
+3. **Hyperlinks.**
+4. **Gradient / pattern / picture fills** (approximate faithfully and flag).
+5. **Text rotation / RTL / text effects.**
+6. **Custom bullet hanging-indent rulers** (glyph/numbering/size/font/colour are reproduced; the
+   ruler indent falls back to the level default).
 
 ---
 

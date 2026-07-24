@@ -71,6 +71,21 @@ namespace TableToShapes.Core.Model
         public float SpaceWithin { get; set; }
         public int IndentLevel { get; set; }
         public IReadOnlyList<RunModel> Runs { get; set; } = Array.Empty<RunModel>();
+
+        // ---- bullet / numbering (MsoBulletType: 0 = none, 1 = unnumbered, 2 = numbered) ----
+        public int BulletType { get; set; }
+        /// <summary>Unicode of the bullet glyph, for an unnumbered bullet.</summary>
+        public int BulletCharacter { get; set; }
+        /// <summary>MsoNumberedBulletStyle, for a numbered bullet.</summary>
+        public int BulletNumberStyle { get; set; }
+        public int BulletStartValue { get; set; }
+        /// <summary>Bullet size relative to the text (1.0 = 100%).</summary>
+        public float BulletRelativeSize { get; set; }
+        /// <summary>Bullet glyph font; null means "follow the paragraph text font".</summary>
+        public string BulletFontName { get; set; }
+        /// <summary>True when the bullet follows the text colour rather than its own.</summary>
+        public bool BulletUsesTextColor { get; set; }
+        public int BulletColorRgb { get; set; }
     }
 
     public sealed class RunModel

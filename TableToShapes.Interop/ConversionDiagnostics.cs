@@ -63,6 +63,12 @@ namespace TableToShapes.Interop
             for (int p = 0; p < t.Paragraphs.Count; p++)
             {
                 var para = t.Paragraphs[p];
+                if (para.BulletType != 0)
+                    sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
+                        "      bullet[p{0}] type={1} char={2} numStyle={3} start={4} size={5:F2} font=\"{6}\" color={7}",
+                        p, para.BulletType, para.BulletCharacter, para.BulletNumberStyle, para.BulletStartValue,
+                        para.BulletRelativeSize, para.BulletFontName,
+                        para.BulletUsesTextColor ? "text" : ("0x" + (para.BulletColorRgb & 0xFFFFFF).ToString("X6", CultureInfo.InvariantCulture))));
                 for (int i = 0; i < para.Runs.Count; i++)
                 {
                     var run = para.Runs[i];

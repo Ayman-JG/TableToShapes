@@ -32,7 +32,7 @@ terms, what carries over faithfully, what has a known limitation, and what isn't
 | Highlight colour (text marker) | Yes | Automated (picture) | |
 | Italic, underline, font size | Yes | Manual / expected | Handled in code; not individually asserted by a test. |
 | Paragraph alignment, spacing, indent | Yes | Manual / expected | |
-| Bullets and numbered lists | No | - | Planned. |
+| Bullets and numbered lists | Yes | Automated (picture) | Glyph, numbering style/start, size, font and colour reproduced; a custom hanging-indent ruler falls back to PowerPoint's default for the level. |
 | Superscript / subscript, small caps, letter spacing, underline colour | No | - | Planned. |
 | Hyperlinks | No | - | Link styling may show, but the clickable link is not kept. |
 
@@ -66,7 +66,7 @@ terms, what carries over faithfully, what has a known limitation, and what isn't
 | Block merges (e.g. 2x2) | Yes | Automated (picture) | |
 | Column widths and single-line row heights | Yes | Automated (picture) | |
 | Table position on the slide | Yes | Automated (picture) | |
-| Very tall (auto-grown, multi-line) rows | Partial | Automated (picture) | Guarded by a test; a rare edge case can under-size a grown row (see Caveats). |
+| Very tall (auto-grown, multi-line) rows | Yes | Automated (picture) | Row heights come from the actual laid-out cell rectangles; guarded by a multi-paragraph cell in the test fixture. |
 | Rotated tables | No | - | Planned. |
 | Pictures / charts / other shapes inside a cell | No | - | Only text, fill and borders are carried over. |
 
@@ -91,8 +91,8 @@ terms, what carries over faithfully, what has a known limitation, and what isn't
 - **Only fill, text and borders are copied** from each cell - embedded pictures, charts or shapes
   inside a cell are dropped.
 - **Autofit "shrink text to fit" is not reproduced** - text keeps its original sizes.
-- **Very tall multi-line rows** depend on PowerPoint reporting accurate cell heights; in rare
-  cases a grown row may render at its minimum height.
+- **Custom bullet indentation** (a hand-adjusted ruler) falls back to PowerPoint's default hanging
+  indent for that level; the bullet glyph, numbering, size, font and colour are reproduced.
 
 ## How thoroughly it's verified
 

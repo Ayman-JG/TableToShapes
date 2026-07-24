@@ -205,19 +205,59 @@ namespace TableToShapes.Interop
                     runs.Add(ReadRun(run));
                 }
 
-                paragraphs.Add(new ParagraphModel
+                var pf = para.ParagraphFormat;
+                var paragraph = new ParagraphModel
                 {
-                    Alignment = (int)para.ParagraphFormat.Alignment,
-                    SpaceBefore = para.ParagraphFormat.SpaceBefore,
-                    SpaceAfter = para.ParagraphFormat.SpaceAfter,
-                    SpaceWithin = para.ParagraphFormat.SpaceWithin,
-                    IndentLevel = para.ParagraphFormat.IndentLevel,
+                    Alignment = (int)pf.Alignment,
+                    SpaceBefore = pf.SpaceBefore,
+                    SpaceAfter = pf.SpaceAfter,
+                    SpaceWithin = pf.SpaceWithin,
+                    IndentLevel = pf.IndentLevel,
                     Runs = runs
-                });
+                };
+                ReadBullet(pf, paragraph);
+                paragraphs.Add(paragraph);
             }
 
             text.Paragraphs = paragraphs;
             return text;
+        }
+
+        // Captures the paragraph's bullet/numbering. Guarded because bullet access can throw on
+        // some builds; a failure just leaves the paragraph un-bulleted (and is logged).
+        private void ReadBullet(Office.ParagraphFormat2 pf, ParagraphModel para)
+        {
+            try
+            {
+                var bullet = pf.Bullet;
+                int type = (int)bullet.Type;
+                para.BulletType = type;
+
+                bool unnumbered = type == (int)Office.MsoBulletType.msoBulletUnnumbered;
+                bool numbered = type == (int)Office.MsoBulletType.msoBulletNumbered;
+                if (!unnumbered && !numbered) return;
+
+                para.BulletRelativeSize = bullet.RelativeSize;
+                para.BulletUsesTextColor = bullet.UseTextColor == Office.MsoTriState.msoTrue;
+                if (!para.BulletUsesTextColor)
+                    para.BulletColorRgb = bullet.Font.Fill.ForeColor.RGB;
+                if (bullet.UseTextFont != Office.MsoTriState.msoTrue)
+                    para.BulletFontName = bullet.Font.Name;
+
+                if (unnumbered)
+                {
+                    para.BulletCharacter = bullet.Character;
+                }
+                else
+                {
+                    para.BulletNumberStyle = (int)bullet.Style;
+                    para.BulletStartValue = bullet.StartValue;
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Warning("Bullet read failed; paragraph bullet not captured.", ex);
+            }
         }
 
         private RunModel ReadRun(Office.TextRange2 run)

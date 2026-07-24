@@ -14,7 +14,7 @@ namespace TableToShapes.Interop
     {
         private readonly TableReader _reader;
         private readonly LayoutEngine _layoutEngine = new LayoutEngine();
-        private readonly ShapeWriter _writer = new ShapeWriter();
+        private readonly ShapeWriter _writer;
         private readonly ILogger _log;
 
         public TableConverter() : this(NullLogger.Instance) { }
@@ -23,6 +23,7 @@ namespace TableToShapes.Interop
         {
             _log = logger ?? NullLogger.Instance;
             _reader = new TableReader(_log);
+            _writer = new ShapeWriter(_log);
         }
 
         /// <exception cref="InvalidOperationException">The shape is not a table.</exception>

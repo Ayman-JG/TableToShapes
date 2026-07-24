@@ -198,7 +198,12 @@ namespace TableToShapes.Tests.E2E
             ro2a.Text = "ro2a";
             ro2a.Font.Strike = Office.MsoTextStrike.msoSingleStrike;
             ro2a.Font.Name = "Consolas";
-            SetText(table.Cell(4, 2), "ed2");
+            // Bulleted cell (guards bullet/numbering round-trip).
+            var ed2 = table.Cell(4, 2).Shape.TextFrame2.TextRange;
+            ed2.Text = "ed2";
+            var bullet = ed2.Paragraphs[1, 1].ParagraphFormat.Bullet;
+            bullet.Type = Office.MsoBulletType.msoBulletUnnumbered;
+            bullet.Character = 8226; // round bullet dot
             var rCell = table.Cell(4, 3);
             rCell.Shape.Fill.ForeColor.RGB = Orange;
             rCell.Shape.TextFrame2.TextRange.Text = "r";

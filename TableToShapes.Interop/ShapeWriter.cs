@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 using TableToShapes.Core.Layout;
+using TableToShapes.Core.Logging;
 using TableToShapes.Core.Model;
 using PowerPoint = Microsoft.Office.Interop.PowerPoint;
 using Office = Microsoft.Office.Core;
@@ -14,6 +16,15 @@ namespace TableToShapes.Interop
     {
         /// <summary>Prefix applied to every shape we create, so partial output can be cleaned up on failure.</summary>
         public const string CreatedShapePrefix = "T2S_";
+
+        private readonly ILogger _log;
+
+        public ShapeWriter() : this(NullLogger.Instance) { }
+
+        public ShapeWriter(ILogger logger)
+        {
+            _log = logger ?? NullLogger.Instance;
+        }
 
         /// <summary>Creates all cell rectangles and border lines; returns their shape names.</summary>
         public List<string> Write(PowerPoint.Slide slide, TableModel table, LayoutResult layout)
@@ -30,7 +41,7 @@ namespace TableToShapes.Interop
             return names;
         }
 
-        private static PowerPoint.Shape WriteCell(PowerPoint.Slide slide, CellModel cell, CellPlacement p)
+        private PowerPoint.Shape WriteCell(PowerPoint.Slide slide, CellModel cell, CellPlacement p)
         {
             var rect = slide.Shapes.AddShape(
                 Office.MsoAutoShapeType.msoShapeRectangle, p.Left, p.Top, p.Width, p.Height);
@@ -76,7 +87,7 @@ namespace TableToShapes.Interop
             return value;
         }
 
-        private static void WriteText(PowerPoint.TextFrame2 frame, TextModel text)
+        private void WriteText(PowerPoint.TextFrame2 frame, TextModel text)
         {
             frame.MarginLeft = text.MarginLeft;
             frame.MarginRight = text.MarginRight;
@@ -143,14 +154,61 @@ namespace TableToShapes.Interop
                 // Guard against paragraph-count drift between model and live text.
                 if (paraIndex <= textRange.Paragraphs.Count)
                 {
-                    var paraRange = textRange.Paragraphs[paraIndex, 1];
-                    paraRange.ParagraphFormat.Alignment = (Office.MsoParagraphAlignment)para.Alignment;
-                    paraRange.ParagraphFormat.SpaceBefore = para.SpaceBefore;
-                    paraRange.ParagraphFormat.SpaceAfter = para.SpaceAfter;
-                    paraRange.ParagraphFormat.SpaceWithin = para.SpaceWithin;
-                    paraRange.ParagraphFormat.IndentLevel = para.IndentLevel;
+                    var pf = textRange.Paragraphs[paraIndex, 1].ParagraphFormat;
+                    pf.Alignment = (Office.MsoParagraphAlignment)para.Alignment;
+                    pf.SpaceBefore = para.SpaceBefore;
+                    pf.SpaceAfter = para.SpaceAfter;
+                    pf.SpaceWithin = para.SpaceWithin;
+                    pf.IndentLevel = para.IndentLevel;
+                    WriteBullet(pf, para);
                 }
                 paraIndex++;
+            }
+        }
+
+        // Re-applies the paragraph's bullet/numbering. Guarded so a bullet failure never fails
+        // the whole conversion (the paragraph just renders without its bullet).
+        private void WriteBullet(Office.ParagraphFormat2 pf, ParagraphModel para)
+        {
+            bool unnumbered = para.BulletType == (int)Office.MsoBulletType.msoBulletUnnumbered;
+            bool numbered = para.BulletType == (int)Office.MsoBulletType.msoBulletNumbered;
+            // Fresh shapes have no bullet by default, so "none" needs no action; picture/mixed
+            // bullets are not reproduced (they fall back to no bullet).
+            if (!unnumbered && !numbered) return;
+
+            try
+            {
+                var bullet = pf.Bullet;
+                bullet.Type = numbered
+                    ? Office.MsoBulletType.msoBulletNumbered
+                    : Office.MsoBulletType.msoBulletUnnumbered;
+
+                if (para.BulletRelativeSize > 0f)
+                    bullet.RelativeSize = para.BulletRelativeSize;
+                if (!string.IsNullOrEmpty(para.BulletFontName))
+                {
+                    bullet.UseTextFont = Office.MsoTriState.msoFalse;
+                    bullet.Font.Name = para.BulletFontName;
+                }
+                if (!para.BulletUsesTextColor)
+                {
+                    bullet.UseTextColor = Office.MsoTriState.msoFalse;
+                    bullet.Font.Fill.ForeColor.RGB = para.BulletColorRgb;
+                }
+
+                if (unnumbered)
+                {
+                    bullet.Character = para.BulletCharacter;
+                }
+                else
+                {
+                    bullet.Style = (Office.MsoNumberedBulletStyle)para.BulletNumberStyle;
+                    bullet.StartValue = para.BulletStartValue;
+                }
+            }
+            catch (Exception ex)
+            {
+                _log.Warning("Bullet write failed; paragraph rendered without its bullet.", ex);
             }
         }
     }
