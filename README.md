@@ -109,21 +109,8 @@ Bitness note: the script writes to `HKCU\Software\Classes`; it has been used wit
 32-bit Office on 64-bit Windows may resolve the class under `Wow6432Node`, which the script does
 not currently write - adjust the registry path if you run 32-bit Office.
 
-### Signing (dev/test)
-
-Windows/Office may block an unsigned add-in depending on trust settings. For local testing,
-`sign-dev.ps1` creates a self-signed code-signing certificate and signs the three assemblies:
-
-```powershell
-dotnet build
-cd TableToShapes.AddIn
-.\sign-dev.ps1 -Trust     # -Trust imports the cert into the machine trust stores (needs admin)
-.\install-addin.ps1
-```
-
-This is **development only** - a self-signed certificate is trusted only where you import it.
-Distributing to clients needs a real code-signing certificate (internal PKI, a public-CA
-hardware token, or a cloud signing service) applied to the assemblies and the installer.
+Code signing is a deployment concern (not needed for local dev/testing) - see
+[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for how it fits the MSI.
 
 ### Testing the add-in
 

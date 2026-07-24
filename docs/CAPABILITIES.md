@@ -76,7 +76,7 @@ terms, what carries over faithfully, what has a known limitation, and what isn't
 |---|---|---|---|
 | Original table removed and replaced by one grouped shape | Yes | Automated (picture) | |
 | Clean up if conversion fails partway | Yes | Manual / expected | The slide is left as it was found. |
-| Doing nothing (with a prompt) when a non-table is selected | Yes | Automated (logic) | |
+| Doing nothing (with a prompt) when a non-table is selected | Yes | Manual / expected | The "reject a non-table" guard is covered by an E2E test; the prompt itself is checked by eye. |
 | Undo in one step | No | - | Reverting may take more than one Ctrl+Z. |
 | Editing the result as a table afterwards | No | - | The result is shapes, not a table; conversion is one-directional. |
 

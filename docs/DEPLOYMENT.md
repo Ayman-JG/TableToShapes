@@ -39,8 +39,9 @@ on the Home tab.
 
 ## What the MSI does
 
-- Copies `TableToShapes.AddIn.dll`, `TableToShapes.Interop.dll`, `TableToShapes.Core.dll` to
-  `C:\Program Files\TableToShapes`.
+- Copies the add-in assemblies (`TableToShapes.AddIn/Interop/Core.dll`) **plus the Office interop
+  DLLs the build produces** to `C:\Program Files\TableToShapes` - it harvests every `*.dll` from
+  the build output (see "Which files ship" below).
 - Registers the managed COM class (`mscoree` shim + `CodeBase` pointing at the installed DLL) and
   the `ProgId`, under `HKLM\Software\Classes`.
 - Writes `HKLM\...\Office\PowerPoint\Addins\TableToShapes.AddIn.Connect` with `LoadBehavior = 3`.
@@ -92,18 +93,12 @@ The MSI works unsigned, but there are trust consequences:
 
 To sign (do it in this order so signatures nest correctly):
 
-1. Sign the **three DLLs** after step 1 of the build (see the repo's signing notes; for production
-   use an internal-PKI, public-CA hardware-token, or cloud signing certificate - not the
-   self-signed dev cert).
+1. Sign the **three DLLs** after step 1 of the build, using a production code-signing certificate
+   (internal PKI, a public-CA hardware token, or a cloud signing service):
+   `signtool sign /fd SHA256 /tr <timestamp-url> /td SHA256 <dll> ...`.
 2. Build the MSI (WiX harvests the already-signed DLLs).
 3. Sign the **MSI**: `signtool sign /fd SHA256 /tr <timestamp-url> /td SHA256 TableToShapes.msi`.
 4. If you add a Burn `setup.exe` bundle, sign it last (`insignia` reattaches the engine signature).
 
 Signing is a drop-in: the DLL sign step slots between build and packaging, and the MSI sign is a
 final `signtool` call - no changes to the WiX authoring.
-
-## Note on the dev signing script
-
-`TableToShapes.AddIn/sign-dev.ps1` is **separate** from and **not required by** the MSI. It only
-matters if you want to test how the add-in behaves under a "signed add-ins only" Office policy on
-your dev box. You can ignore it for packaging.
