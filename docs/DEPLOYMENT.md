@@ -62,9 +62,13 @@ on the Home tab.
    most worth verifying on a real install - confirm the button appears. If fusion rejects the
    path (spaces / backslashes), either install to a space-free folder or switch the value to the
    plain path form.
-4. **Bitness.** This is a per-machine MSI writing to the native `HKLM` view. 64-bit Office reads
-   it directly; **32-bit Office on 64-bit Windows** resolves COM under `Wow6432Node`, so build a
-   32-bit MSI (or add the `Wow6432Node` registry entries) for 32-bit Office estates.
+4. **Bitness - important.** The installer builds as **x64** by default (`<Platform>x64</Platform>`
+   in the `.wixproj`), so it installs to `C:\Program Files\TableToShapes` and registers the COM
+   class in the **64-bit** registry view that 64-bit PowerPoint reads. For a **32-bit Office**
+   estate, set `<Platform>x86</Platform>` instead (installs to `Program Files (x86)` and registers
+   under `WOW6432Node`). A 32-bit MSI is invisible to 64-bit PowerPoint and vice-versa - matching
+   the package architecture to the installed Office bitness is what makes the ribbon button
+   appear.
 5. **Per-user vs per-machine.** `Scope="perMachine"` installs for all users and needs admin. For a
    no-admin, current-user install, change the scope to `perUser` and the registry roots from
    `HKLM` to `HKCU` (matching `install-addin.ps1`).

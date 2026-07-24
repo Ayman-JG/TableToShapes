@@ -5,6 +5,9 @@
     <OutputType>Package</OutputType>
     <!-- Match the add-in build configuration; defaults to Release for shipping. -->
     <Configuration Condition="'$(Configuration)' == ''">Release</Configuration>
+    <!-- Build a 64-bit MSI so it installs to the native Program Files and registers in the
+         64-bit registry view that 64-bit PowerPoint reads. For 32-bit Office, set this to x86. -->
+    <Platform>x64</Platform>
   </PropertyGroup>
 
   <PropertyGroup>
